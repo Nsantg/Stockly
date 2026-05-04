@@ -1,0 +1,35 @@
+import 'reflect-metadata';
+import { DataSource } from 'typeorm';
+import { User } from '../entity/User';
+
+const isCliMode = process.env.TYPEORM_CLI === 'true';
+
+export const AppDataSource = new DataSource({
+  type: 'postgres',
+  host: process.env.DATABASE_HOST ?? 'localhost',
+  port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
+  username: process.env.DATABASE_USER ?? 'postgres',
+  password: process.env.DATABASE_PASSWORD ?? 'postgres',
+  database: process.env.DATABASE_NAME ?? 'stockly_db',
+  synchronize: false,
+  logging: process.env.NODE_ENV !== 'production',
+  entities: isCliMode ? ['src/entity/*.ts'] : [User],
+  migrations: isCliMode ? ['src/migrations/*.ts'] : [],
+});
+
+// Garantiza una sola inicialización concurrente y reutiliza la conexión
+let initPromise: Promise<DataSource> | null = null;
+
+export function getDataSource(): Promise<DataSource> {
+  if (AppDataSource.isInitialized) return Promise.resolve(AppDataSource);
+  if (initPromise) return initPromise;
+
+  initPromise = AppDataSource.initialize()
+    .then(() => AppDataSource)
+    .catch((err) => {
+      initPromise = null; // permite reintentar en el próximo request
+      throw err;
+    });
+
+  return initPromise;
+}

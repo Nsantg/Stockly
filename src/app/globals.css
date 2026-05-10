@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #F5F4F0;
+    color: #1C1C1E;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #F5F4F0 inset;
+    -webkit-text-fill-color: #1C1C1E;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+@layer utilities {
+  .animation-delay-80 {
+    animation-delay: 80ms;
+  }
+  .animation-delay-160 {
+    animation-delay: 160ms;
+  }
+  .animation-delay-240 {
+    animation-delay: 240ms;
+  }
+}

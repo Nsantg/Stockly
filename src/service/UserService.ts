@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { userRepository } from '../repository/UserRepository';
-import { User, UserRole } from '../entity/User';
+import { User } from '../entity/User';
+import { UserRole } from '../entity/UserRole';
 
 const createUserSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
@@ -22,7 +23,7 @@ class UserService {
       throw new Error('El email ya está en uso');
     }
 
-    const hashedPassword = await bcrypt.hash(validated.password, 10);
+    const hashedPassword = await bcrypt.hash(validated.password, 12);
 
     const user = await userRepository.create({
       ...validated,

@@ -1,6 +1,6 @@
 import { authOptions } from '../../src/lib/auth';
 import { userService } from '../../src/service/UserService';
-import { UserRole } from '../../src/entity/User';
+import { UserRole } from '../../src/entity/UserRole';
 import bcrypt from 'bcryptjs';
 
 jest.mock('../../src/service/UserService');

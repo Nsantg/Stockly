@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { userController } from '../../src/controller/UserController';
 import { userService } from '../../src/service/UserService';
 import { getServerSession } from 'next-auth';
-import { UserRole } from '../../src/entity/User';
+import { UserRole } from '../../src/entity/UserRole';
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "Stockly API",
+    "_postman_id": "stockly-api-collection-v1",
+    "description": "Coleccion completa de endpoints para Stockly. Flujo de inicio: 1) Obtener CSRF Token, 2) Login, 3) Usar el resto de endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "csrfToken", "value": "", "type": "string" },
+    { "key": "category_id", "value": "", "type": "string" },
+    { "key": "subcategory_id", "value": "", "type": "string" },
+    { "key": "product_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "1. Obtener CSRF Token",
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "pm.collectionVariables.set('csrfToken', json.csrfToken);", "console.log('CSRF Token guardado:', json.csrfToken);"], "type": "text/javascript" } }],
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "http://localhost:3000/api/auth/csrf", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "csrf"] }
+          }
+        },
+        {
+          "name": "2. Login",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { console.log('Login exitoso.'); } else { console.error('Login fallido:', pm.response.text()); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "header": [],
+            "body": { "mode": "urlencoded", "urlencoded": [{ "key": "csrfToken", "value": "{{csrfToken}}", "type": "text" }, { "key": "email", "value": "admin@stockly.com", "type": "text" }, { "key": "password", "value": "admin123", "type": "text" }, { "key": "redirect", "value": "false", "type": "text" }, { "key": "json", "value": "true", "type": "text" }] },
+            "url": { "raw": "http://localhost:3000/api/auth/callback/credentials", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "callback", "credentials"] }
+          }
+        },
+        {
+          "name": "3. Ver Sesion Activa",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/auth/session", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "session"] } }
+        },
+        {
+          "name": "4. Logout",
+          "request": {
+            "method": "POST", "header": [],
+            "body": { "mode": "urlencoded", "urlencoded": [{ "key": "csrfToken", "value": "{{csrfToken}}", "type": "text" }] },
+            "url": { "raw": "http://localhost:3000/api/auth/signout", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "signout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Crear Admin (sin sesion requerida)",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Santiago\",\n  \"apellido\": \"Garcia\",\n  \"email\": \"admin@stockly.com\",\n  \"password\": \"admin123\",\n  \"rol\": \"Admin\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "users"] }
+          }
+        },
+        {
+          "name": "Crear Almacenista",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Martinez\",\n  \"email\": \"almacenista@stockly.com\",\n  \"password\": \"stock123\",\n  \"rol\": \"Almacenista\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "users"] }
+          }
+        },
+        {
+          "name": "Crear Despachador",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Laura\",\n  \"apellido\": \"Perez\",\n  \"email\": \"despachador@stockly.com\",\n  \"password\": \"desp123\",\n  \"rol\": \"Despachador\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "users"] }
+          }
+        },
+        {
+          "name": "Crear Visualizador",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Lopez\",\n  \"email\": \"visualizador@stockly.com\",\n  \"password\": \"vis123\",\n  \"rol\": \"Visualizador\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "users"] }
+          }
+        },
+        {
+          "name": "Listar Usuarios",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "users"] } }
+        },
+        {
+          "name": "[403] Crear usuario sin ser Admin",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Test\",\n  \"apellido\": \"Forbidden\",\n  \"email\": \"test403@stockly.com\",\n  \"password\": \"pass123\",\n  \"rol\": \"Despachador\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "users"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categorias",
+      "item": [
+        {
+          "name": "Listar Categorias",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/categories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories"] } }
+        },
+        {
+          "name": "Crear Categoria - Electroterapia",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { const json = pm.response.json(); pm.collectionVariables.set('category_id', json.id); console.log('category_id guardado:', json.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Electroterapia\",\n  \"requiresRefrigeration\": false\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/categories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories"] }
+          }
+        },
+        {
+          "name": "Crear Categoria - Biologicos",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Biologicos\",\n  \"requiresRefrigeration\": true\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/categories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories"] }
+          }
+        },
+        {
+          "name": "Obtener Categoria por ID",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/categories/{{category_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories", "{{category_id}}"] } }
+        },
+        {
+          "name": "Actualizar Categoria",
+          "request": {
+            "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Electroterapia Avanzada\",\n  \"requiresRefrigeration\": false\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/categories/{{category_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories", "{{category_id}}"] }
+          }
+        },
+        {
+          "name": "Subcategorias de una Categoria",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/categories/{{category_id}}/subcategories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories", "{{category_id}}", "subcategories"] } }
+        },
+        {
+          "name": "Eliminar Categoria",
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "http://localhost:3000/api/v1/categories/{{category_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories", "{{category_id}}"] } }
+        },
+        {
+          "name": "[404] Categoria inexistente",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/categories/00000000-0000-0000-0000-000000000000", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "categories", "00000000-0000-0000-0000-000000000000"] } }
+        }
+      ]
+    },
+    {
+      "name": "Subcategorias",
+      "item": [
+        {
+          "name": "Listar Todas las Subcategorias",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/subcategories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories"] } }
+        },
+        {
+          "name": "Filtrar Subcategorias por Categoria",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/subcategories?categoryId={{category_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories"], "query": [{ "key": "categoryId", "value": "{{category_id}}" }] } }
+        },
+        {
+          "name": "Crear Subcategoria - TENS",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { const json = pm.response.json(); pm.collectionVariables.set('subcategory_id', json.id); console.log('subcategory_id guardado:', json.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"TENS\",\n  \"categoryId\": \"{{category_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/subcategories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories"] }
+          }
+        },
+        {
+          "name": "Crear Subcategoria - Ultrasonido",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ultrasonido\",\n  \"categoryId\": \"{{category_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/subcategories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories"] }
+          }
+        },
+        {
+          "name": "Obtener Subcategoria por ID",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/subcategories/{{subcategory_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories", "{{subcategory_id}}"] } }
+        },
+        {
+          "name": "Actualizar Subcategoria",
+          "request": {
+            "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"TENS Digital\",\n  \"categoryId\": \"{{category_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/subcategories/{{subcategory_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories", "{{subcategory_id}}"] }
+          }
+        },
+        {
+          "name": "Eliminar Subcategoria",
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "http://localhost:3000/api/v1/subcategories/{{subcategory_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories", "{{subcategory_id}}"] } }
+        },
+        {
+          "name": "[400] Nombre duplicado en misma categoria",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"TENS\",\n  \"categoryId\": \"{{category_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/subcategories", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "subcategories"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Productos",
+      "item": [
+        {
+          "name": "Listar Productos",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products?page=1&limit=20", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] } }
+        },
+        {
+          "name": "Listar - Filtrar por categoria",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products?categoryId={{category_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"], "query": [{ "key": "categoryId", "value": "{{category_id}}" }] } }
+        },
+        {
+          "name": "Listar - Filtrar por subcategoria",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products?subcategoryId={{subcategory_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"], "query": [{ "key": "subcategoryId", "value": "{{subcategory_id}}" }] } }
+        },
+        {
+          "name": "Listar - Buscar por texto",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products?search=tens", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"], "query": [{ "key": "search", "value": "tens" }] } }
+        },
+        {
+          "name": "Crear Producto - Electroterapia (con serialNumber)",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { const json = pm.response.json(); pm.collectionVariables.set('product_id', json.id); console.log('product_id guardado:', json.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"TENS-001\",\n  \"name\": \"Equipo TENS Digital Pro\",\n  \"subcategoryId\": \"{{subcategory_id}}\",\n  \"serialNumber\": \"SN-2024-001\",\n  \"weight\": 1.2,\n  \"requiresRefrigeration\": false,\n  \"stock\": 5,\n  \"minStock\": 2\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/products", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"] }
+          }
+        },
+        {
+          "name": "Crear Producto - Sin serialNumber",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"TENS-002\",\n  \"name\": \"Electrodos TENS x4\",\n  \"subcategoryId\": \"{{subcategory_id}}\",\n  \"weight\": 0.05,\n  \"stock\": 50,\n  \"minStock\": 10\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/products", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"] }
+          }
+        },
+        {
+          "name": "Obtener Producto por ID",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products/{{product_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products", "{{product_id}}"] } }
+        },
+        {
+          "name": "Actualizar Producto",
+          "request": {
+            "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"stock\": 10,\n  \"minStock\": 3,\n  \"name\": \"Equipo TENS Digital Pro v2\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/products/{{product_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products", "{{product_id}}"] }
+          }
+        },
+        {
+          "name": "Resumen del Inventario",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products/summary", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products", "summary"] } }
+        },
+        {
+          "name": "Autocompletado - Buscar tens",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products/search?q=tens", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products", "search"], "query": [{ "key": "q", "value": "tens" }] } }
+        },
+        {
+          "name": "Eliminar Producto",
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products/{{product_id}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products", "{{product_id}}"] } }
+        },
+        {
+          "name": "[400] Campos requeridos faltantes",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sin codigo ni subcategoria\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/products", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"] }
+          }
+        },
+        {
+          "name": "[400] Stock negativo",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"ERR-001\",\n  \"name\": \"Producto invalido\",\n  \"subcategoryId\": \"{{subcategory_id}}\",\n  \"stock\": -5\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/products", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"] }
+          }
+        },
+        {
+          "name": "[400] Codigo duplicado",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"TENS-001\",\n  \"name\": \"Otro producto mismo codigo\",\n  \"subcategoryId\": \"{{subcategory_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "http://localhost:3000/api/v1/products", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products"] }
+          }
+        },
+        {
+          "name": "[404] Producto inexistente",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/products/00000000-0000-0000-0000-000000000000", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "products", "00000000-0000-0000-0000-000000000000"] } }
+        }
+      ]
+    },
+    {
+      "name": "Swagger y Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/health", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "health"] } }
+        },
+        {
+          "name": "OpenAPI JSON Spec",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/docs", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "docs"] } }
+        },
+        {
+          "name": "Swagger UI (abrir en browser)",
+          "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/api/v1/docs/ui", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "v1", "docs", "ui"] } }
+        }
+      ]
+    }
+  ]
+}

@@ -6,31 +6,17 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { UserRole } from './UserRole';
 
-@Entity('users')
-export class User {
+@Entity('categories')
+export class Category {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar' })
-  nombre!: string;
-
-  @Column({ type: 'varchar' })
-  apellido!: string;
-
   @Column({ type: 'varchar', unique: true })
-  email!: string;
+  name!: string;
 
-  @Column({ type: 'varchar' })
-  password!: string;
-
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.DESPACHADOR,
-  })
-  rol!: UserRole;
+  @Column({ type: 'boolean', default: false })
+  requiresRefrigeration!: boolean;
 
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;

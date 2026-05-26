@@ -3,9 +3,32 @@ import { getServerSession } from 'next-auth';
 import { ZodError } from 'zod';
 import { userService } from '../service/UserService';
 import { authOptions } from '../lib/auth';
-import { UserRole } from '../entity/User';
+import { UserRole } from '../entity/UserRole';
 
 class UserController {
+  /**
+   * @swagger
+   * /api/v1/users:
+   *   get:
+   *     summary: Lista todos los usuarios activos
+   *     tags:
+   *       - Users
+   *     security:
+   *       - cookieAuth: []
+   *     responses:
+   *       200:
+   *         description: Lista de usuarios (sin campo password)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/User'
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       500:
+   *         $ref: '#/components/responses/InternalError'
+   */
   async getUsers(): Promise<NextResponse> {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -21,6 +44,40 @@ class UserController {
     }
   }
 
+  /**
+   * @swagger
+   * /api/v1/users:
+   *   post:
+   *     summary: Crea un nuevo usuario
+   *     description: >
+   *       Crear un usuario con rol Admin no requiere sesión.
+   *       Crear cualquier otro rol requiere sesión de Admin.
+   *     tags:
+   *       - Users
+   *     security:
+   *       - cookieAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateUserDto'
+   *     responses:
+   *       201:
+   *         description: Usuario creado exitosamente (sin campo password)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       400:
+   *         $ref: '#/components/responses/ValidationError'
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       403:
+   *         $ref: '#/components/responses/Forbidden'
+   *       500:
+   *         $ref: '#/components/responses/InternalError'
+   */
   async createUser(request: NextRequest): Promise<NextResponse> {
     try {
       const body = await request.json();

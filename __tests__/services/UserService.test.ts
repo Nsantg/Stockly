@@ -1,6 +1,6 @@
 import { userService } from '../../src/service/UserService';
 import { userRepository } from '../../src/repository/UserRepository';
-import { UserRole } from '../../src/entity/User';
+import { UserRole } from '../../src/entity/UserRole';
 import bcrypt from 'bcryptjs';
 
 jest.mock('../../src/repository/UserRepository');
@@ -33,7 +33,7 @@ describe('UserService - Registro de Usuarios', () => {
 
     
     expect(userRepository.emailExists).toHaveBeenCalledWith('juan@stockly.com');
-    expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
+    expect(bcrypt.hash).toHaveBeenCalledWith('password123', 12);
     expect(userRepository.save).toHaveBeenCalled();
     expect(result.password).toBe('hashed_password_123'); 
   });

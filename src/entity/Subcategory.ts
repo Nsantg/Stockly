@@ -5,32 +5,27 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Unique,
 } from 'typeorm';
-import { UserRole } from './UserRole';
+import { Category } from './Category';
 
-@Entity('users')
-export class User {
+@Entity('subcategories')
+@Unique(['name', 'categoryId'])
+export class Subcategory {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'varchar' })
-  nombre!: string;
+  name!: string;
 
-  @Column({ type: 'varchar' })
-  apellido!: string;
+  @Column({ type: 'uuid' })
+  categoryId!: string;
 
-  @Column({ type: 'varchar', unique: true })
-  email!: string;
-
-  @Column({ type: 'varchar' })
-  password!: string;
-
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.DESPACHADOR,
-  })
-  rol!: UserRole;
+  @ManyToOne(() => Category)
+  @JoinColumn({ name: 'categoryId' })
+  category!: Category;
 
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;

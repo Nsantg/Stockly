@@ -1,6 +1,10 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { User } from '../entity/User';
+import { Category } from '../entity/Category';
+import { Subcategory } from '../entity/Subcategory';
+import { Product } from '../entity/Product';
+import { Lot } from '../entity/Lot';
 
 const isCliMode = process.env.TYPEORM_CLI === 'true';
 
@@ -13,7 +17,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DATABASE_NAME ?? 'stockly_db',
   synchronize: false,
   logging: process.env.NODE_ENV !== 'production',
-  entities: isCliMode ? ['src/entity/*.ts'] : [User],
+  entities: isCliMode ? ['src/entity/*.ts'] : [User, Category, Subcategory, Product, Lot],
   migrations: isCliMode ? ['src/migrations/*.ts'] : [],
 });
 

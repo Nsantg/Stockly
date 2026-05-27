@@ -3,8 +3,6 @@ import { productRepository, ProductFilters } from '../repository/ProductReposito
 import { subcategoryRepository } from '../repository/SubcategoryRepository';
 import { Product } from '../entity/Product';
 
-const ELECTROTERAPIA_NAME = 'Electroterapia';
-
 export const createProductSchema = z.object({
   code: z.string().min(1, 'El código es requerido').trim(),
   name: z.string().min(1, 'El nombre es requerido').trim(),
@@ -45,10 +43,9 @@ class ProductService {
       throw new Error('La subcategoría seleccionada no está activa');
     }
 
-    // serialNumber solo aplica a productos de la categoría "Electroterapia"
-    const isElectroterapia =
-      subcategory.category?.name === ELECTROTERAPIA_NAME;
-    const serialNumber = isElectroterapia ? (data.serialNumber ?? null) : null;
+    const serialNumber = subcategory.category?.allowsSerialNumber
+      ? (data.serialNumber ?? null)
+      : null;
 
     const product = await productRepository.create({
       ...data,
@@ -92,10 +89,10 @@ class ProductService {
       subcategory = found;
     }
 
-    // Re-evaluar serialNumber al cambiar subcategoría
     if (data.subcategoryId !== undefined || data.serialNumber !== undefined) {
-      const isElectroterapia = subcategory?.category?.name === ELECTROTERAPIA_NAME;
-      data.serialNumber = isElectroterapia ? (data.serialNumber ?? product.serialNumber) : null;
+      data.serialNumber = subcategory?.category?.allowsSerialNumber
+        ? (data.serialNumber ?? product.serialNumber)
+        : null;
     }
 
     Object.assign(product, { ...data, subcategoryId: targetSubcategoryId });

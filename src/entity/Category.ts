@@ -18,6 +18,9 @@ export class Category {
   @Column({ type: 'boolean', default: false })
   requiresRefrigeration!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  allowsSerialNumber!: boolean;
+
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
 

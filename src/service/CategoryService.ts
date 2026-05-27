@@ -6,6 +6,7 @@ import { Category } from '../entity/Category';
 export const createCategorySchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').trim(),
   requiresRefrigeration: z.boolean().optional().default(false),
+  allowsSerialNumber: z.boolean().optional().default(false),
 });
 
 export const updateCategorySchema = createCategorySchema.partial();

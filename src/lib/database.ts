@@ -5,6 +5,7 @@ import { Category } from '../entity/Category';
 import { Subcategory } from '../entity/Subcategory';
 import { Product } from '../entity/Product';
 import { Lot } from '../entity/Lot';
+import { Client } from '../entity/Client';
 
 const isCliMode = process.env.TYPEORM_CLI === 'true';
 
@@ -17,11 +18,10 @@ export const AppDataSource = new DataSource({
   database: process.env.DATABASE_NAME ?? 'stockly_db',
   synchronize: false,
   logging: process.env.NODE_ENV !== 'production',
-  entities: isCliMode ? ['src/entity/*.ts'] : [User, Category, Subcategory, Product, Lot],
+  entities: isCliMode ? ['src/entity/*.ts'] : [User, Category, Subcategory, Product, Lot, Client],
   migrations: isCliMode ? ['src/migrations/*.ts'] : [],
 });
 
-// Garantiza una sola inicialización concurrente y reutiliza la conexión
 let initPromise: Promise<DataSource> | null = null;
 
 export function getDataSource(): Promise<DataSource> {
@@ -31,7 +31,7 @@ export function getDataSource(): Promise<DataSource> {
   initPromise = AppDataSource.initialize()
     .then(() => AppDataSource)
     .catch((err) => {
-      initPromise = null; // permite reintentar en el próximo request
+      initPromise = null;
       throw err;
     });
 

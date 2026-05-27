@@ -107,6 +107,7 @@ const definition: swaggerJsdoc.OAS3Definition = {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string', example: 'Electroterapia' },
           requiresRefrigeration: { type: 'boolean', example: false },
+          allowsSerialNumber: { type: 'boolean', example: false },
           isActive: { type: 'boolean' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -118,6 +119,7 @@ const definition: swaggerJsdoc.OAS3Definition = {
         properties: {
           name: { type: 'string', example: 'Electroterapia' },
           requiresRefrigeration: { type: 'boolean', default: false },
+          allowsSerialNumber: { type: 'boolean', default: false },
         },
       },
       Subcategory: {
@@ -209,6 +211,46 @@ const definition: swaggerJsdoc.OAS3Definition = {
           total: { type: 'integer', example: 50 },
           page: { type: 'integer', example: 1 },
           limit: { type: 'integer', example: 20 },
+        },
+      },
+      ClientType: {
+        type: 'string',
+        enum: ['Detal', 'Mayorista'],
+        example: 'Detal',
+      },
+      Client: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string', example: 'María Gómez' },
+          phone: { type: 'string', nullable: true, example: '3001234567' },
+          address: { type: 'string', nullable: true, example: 'Calle 10 # 5-20' },
+          city: { type: 'string', nullable: true, example: 'Bogotá' },
+          email: { type: 'string', format: 'email', nullable: true, example: 'maria@example.com' },
+          clientType: { $ref: '#/components/schemas/ClientType' },
+          isActive: { type: 'boolean' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      CreateClientDto: {
+        type: 'object',
+        required: ['name', 'clientType'],
+        properties: {
+          name: { type: 'string', minLength: 2, example: 'María Gómez' },
+          clientType: { $ref: '#/components/schemas/ClientType' },
+          phone: { type: 'string', example: '3001234567' },
+          address: { type: 'string', example: 'Calle 10 # 5-20' },
+          city: { type: 'string', example: 'Bogotá' },
+          email: { type: 'string', format: 'email', example: 'maria@example.com' },
+        },
+      },
+      ClientAutocomplete: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string', example: 'María Gómez' },
+          clientType: { $ref: '#/components/schemas/ClientType' },
         },
       },
     },

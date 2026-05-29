@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { clientService } from '../service/ClientService';
-import { requireSession, requireRoles, WRITE_ROLES } from '../lib/permissions';
-import { UserRole } from '../entity/UserRole';
-
-const CREATE_ROLES = [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR];
+import {
+  requireSession,
+  requireRoles,
+  WRITE_ROLES,
+  CLIENT_CREATE_ROLES,
+} from '../lib/permissions';
 
 function handleError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
@@ -87,7 +89,7 @@ class ClientController {
    *         $ref: '#/components/responses/InternalError'
    */
   async create(request: NextRequest): Promise<NextResponse> {
-    const auth = await requireRoles(CREATE_ROLES);
+    const auth = await requireRoles(CLIENT_CREATE_ROLES);
     if (!auth.ok) return auth.response;
 
     try {

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from './auth';
 import { UserRole } from '../entity/UserRole';
+import { MovementType } from '../entity/MovementType';
 
 interface SessionUser {
   id: string;
@@ -61,3 +62,22 @@ export const READ_ROLES: UserRole[] = [
 ];
 
 export const WRITE_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.ALMACENISTA];
+
+export const CLIENT_CREATE_ROLES: UserRole[] = [
+  UserRole.ADMIN,
+  UserRole.ALMACENISTA,
+  UserRole.DESPACHADOR,
+];
+
+export const ANNUL_AND_EDIT_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.ALMACENISTA];
+
+export const MOVEMENT_TYPE_ROLES: Record<MovementType, UserRole[]> = {
+  [MovementType.ENTRADA]: [UserRole.ADMIN, UserRole.ALMACENISTA],
+  [MovementType.VENTA]: [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR],
+  [MovementType.DAÑO]: [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR],
+  [MovementType.VENCIMIENTO]: [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR],
+  [MovementType.TRASLADO]: [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR],
+  [MovementType.DEVOLUCION]: [UserRole.ADMIN, UserRole.ALMACENISTA],
+  [MovementType.AJUSTE_INGRESO]: [UserRole.ADMIN, UserRole.ALMACENISTA],
+  [MovementType.AJUSTE_SALIDA]: [UserRole.ADMIN, UserRole.ALMACENISTA],
+};

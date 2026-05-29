@@ -118,7 +118,7 @@ class ProductRepository {
     return repo.count({ where: { isActive: true } });
   }
 
-  findLowStock(): Promise<Product[]> {
+  findBelowMinStock(): Promise<Product[]> {
     return this.getRepo().then((repo) =>
       repo
         .createQueryBuilder('product')

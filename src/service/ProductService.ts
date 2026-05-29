@@ -113,7 +113,7 @@ class ProductService {
     const [totalProducts, totalStock, lowStockItems] = await Promise.all([
       productRepository.countActive(),
       productRepository.getTotalStock(),
-      productRepository.findLowStock(),
+      productRepository.findBelowMinStock(),
     ]);
 
     return {

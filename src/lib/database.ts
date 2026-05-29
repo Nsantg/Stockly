@@ -6,6 +6,7 @@ import { Subcategory } from '../entity/Subcategory';
 import { Product } from '../entity/Product';
 import { Lot } from '../entity/Lot';
 import { Client } from '../entity/Client';
+import { Movement } from '../entity/Movement';
 
 const isCliMode = process.env.TYPEORM_CLI === 'true';
 
@@ -18,7 +19,9 @@ export const AppDataSource = new DataSource({
   database: process.env.DATABASE_NAME ?? 'stockly_db',
   synchronize: false,
   logging: process.env.NODE_ENV !== 'production',
-  entities: isCliMode ? ['src/entity/*.ts'] : [User, Category, Subcategory, Product, Lot, Client],
+  entities: isCliMode
+    ? ['src/entity/*.ts']
+    : [User, Category, Subcategory, Product, Lot, Client, Movement],
   migrations: isCliMode ? ['src/migrations/*.ts'] : [],
 });
 

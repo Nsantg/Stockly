@@ -41,8 +41,8 @@ describe('InventoryService - Lógica de Negocio (TDD)', () => {
   describe('Rotación FEFO (Historia N2026-4)', () => {
     it('Debe devolver el lote con la fecha de vencimiento más próxima para un producto', async () => {
       const mockLots = [
-        { id: 'L-002', expiryDate: new Date('2027-12-31'), stock: 500 },
-        { id: 'L-001', expiryDate: new Date('2026-06-01'), stock: 200 }
+        { id: 'L-002', expirationDate: new Date('2027-12-31'), stock: 500 },
+        { id: 'L-001', expirationDate: new Date('2026-06-01'), stock: 200 }
       ];
       (lotRepository.findByProductId as jest.Mock).mockResolvedValue(mockLots);
 

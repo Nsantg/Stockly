@@ -476,16 +476,26 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
   const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[] | null>(null)
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const now = new Date()
+    const todayStart = new Date(now)
+    todayStart.setUTCHours(0, 0, 0, 0)
+    const todayEnd = new Date(now)
+    todayEnd.setUTCHours(23, 59, 59, 999)
+    const sevenDaysAgo = new Date(now)
+    sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7)
+    sevenDaysAgo.setUTCHours(0, 0, 0, 0)
+
+    const start = sevenDaysAgo.toISOString()
+    const end = todayEnd.toISOString()
+    const todayStartStr = todayStart.toISOString()
 
     Promise.all([
       fetch('/api/v1/products/summary').then<ProductSummary>((r) => r.json()),
       fetch(
-        `/api/v1/movements?type=VENTA&startDate=${today}&endDate=${today}&limit=1`,
+        `/api/v1/movements?type=VENTA&startDate=${todayStartStr}&endDate=${end}&limit=1`,
       ).then<MovementsResponse>((r) => r.json()),
       fetch(
-        `/api/v1/movements?startDate=${sevenDaysAgo}&endDate=${today}&limit=500`,
+        `/api/v1/movements?startDate=${start}&endDate=${end}&limit=500`,
       ).then<MovementsResponse>((r) => r.json()),
       fetch('/api/v1/products?limit=200').then<ProductsResponse>((r) => r.json()),
     ])

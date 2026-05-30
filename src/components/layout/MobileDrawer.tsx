@@ -1,0 +1,160 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
+import { getNavGroups, rolBadge } from './navConfig';
+
+interface MobileDrawerProps {
+  nombre: string;
+  apellido: string;
+  rol: string;
+}
+
+export default function MobileDrawer({ nombre, apellido, rol }: MobileDrawerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const badge = rolBadge[rol] ?? rolBadge.Visualizador;
+  const groups = getNavGroups(rol);
+
+  return (
+    <>
+      <header className="md:hidden sticky top-0 z-30 bg-white border-b border-line shrink-0">
+        <div className="flex items-center justify-between px-4 h-16">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-brand-500 flex items-center justify-center shrink-0">
+              <div className="grid grid-cols-2 gap-[3px]">
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-white/90" />
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-white/40" />
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-white/40" />
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-accent-400/90" />
+              </div>
+            </div>
+            <span className="text-[15px] font-bold tracking-tight text-ink">Stockly</span>
+          </div>
+          <button
+            onClick={() => setIsOpen(true)}
+            aria-label="Abrir menú"
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-ink/60 hover:text-ink hover:bg-subtle transition-colors duration-150"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M3 5H15M3 9H15M3 13H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div
+        aria-hidden={!isOpen}
+        onClick={() => setIsOpen(false)}
+        className={`md:hidden fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      <div
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col shadow-card transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between px-5 h-16 border-b border-line shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-brand-500 flex items-center justify-center shrink-0">
+              <div className="grid grid-cols-2 gap-[3px]">
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-white/90" />
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-white/40" />
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-white/40" />
+                <div className="h-[6px] w-[6px] rounded-[2px] bg-accent-400/90" />
+              </div>
+            </div>
+            <span className="text-[15px] font-bold tracking-tight text-ink">Stockly</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)] animate-pulse" />
+          </div>
+          <button
+            onClick={() => setIsOpen(false)}
+            aria-label="Cerrar menú"
+            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted hover:text-ink hover:bg-subtle transition-colors duration-150"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+          {groups.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted/70">
+                {group.label}
+              </p>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
+                          isActive
+                            ? 'bg-brand-50 text-brand-500'
+                            : 'text-ink/60 hover:bg-subtle hover:text-ink'
+                        }`}
+                      >
+                        {isActive && (
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-brand-500" />
+                        )}
+                        <Icon />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        <div className="p-3 border-t border-line shrink-0">
+          <div className="rounded-xl bg-subtle p-3">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand-500 uppercase">
+                  {nombre[0]}{apellido[0]}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ink truncate leading-snug">
+                  {nombre} {apellido}
+                </p>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${badge.text}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`} />
+                  {rol}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-muted hover:text-red-500 hover:bg-red-50 transition-colors duration-150"
+            >
+              <IconSignOut />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function IconSignOut() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
+      <path d="M5.5 2H3C2.448 2 2 2.448 2 3V11C2 11.552 2.448 12 3 12H5.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M9.5 9.5L12.5 7L9.5 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12.5 7H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}

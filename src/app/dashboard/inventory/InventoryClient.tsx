@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Category, Subcategory, Product, ProductSummary, PaginatedProducts } from './types';
 import ProductFormPanel from './ProductFormPanel';
 import { useToast } from '@/components/ui/Toast';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const WRITE_ROLES = ['Admin', 'Almacenista'];
 const LIMIT = 20;
@@ -133,6 +134,7 @@ export default function InventoryClient({ rol }: { rol: string }) {
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<Product | null>(null);
 
   useEffect(() => {
     fetch('/api/v1/products/summary')
@@ -210,16 +212,18 @@ export default function InventoryClient({ rol }: { rol: string }) {
     setPanelOpen(true);
   };
 
-  const handleDelete = async (p: Product) => {
-    if (!confirm(`¿Eliminar "${p.name}"?`)) return;
+  const handleDeleteConfirmed = async () => {
+    if (!confirmTarget) return;
     try {
-      const res = await fetch(`/api/v1/products/${p.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/products/${confirmTarget.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast('Producto eliminado');
       fetchProducts();
       refreshSummary();
     } catch {
       toast('Error al eliminar producto', 'error');
+    } finally {
+      setConfirmTarget(null);
     }
   };
 
@@ -379,7 +383,7 @@ export default function InventoryClient({ rol }: { rol: string }) {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(p)}
+                            onClick={() => setConfirmTarget(p)}
                             className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors"
                             title="Eliminar"
                           >
@@ -422,6 +426,14 @@ export default function InventoryClient({ rol }: { rol: string }) {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={!!confirmTarget}
+        title={`¿Eliminar "${confirmTarget?.name}"?`}
+        description="Esta acción no se puede deshacer."
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmTarget(null)}
+      />
 
       <ProductFormPanel
         open={panelOpen}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Category, Subcategory } from '../types';
 import { useToast } from '@/components/ui/Toast';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const WRITE_ROLES = ['Admin', 'Almacenista'];
 
@@ -215,6 +216,8 @@ export default function CategoriesClient({ rol }: { rol: string }) {
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
   const [editingSub, setEditingSub] = useState<{ catId: string; sub: Subcategory } | null>(null);
+  const [confirmCat, setConfirmCat] = useState<Category | null>(null);
+  const [confirmSub, setConfirmSub] = useState<Subcategory | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -245,15 +248,17 @@ export default function CategoriesClient({ rol }: { rol: string }) {
     setItems((prev) => prev.map((c) => (c.id === id ? { ...c, expanded: !c.expanded } : c)));
   };
 
-  const handleDeleteCat = async (cat: Category) => {
-    if (!confirm(`¿Eliminar categoría "${cat.name}"?`)) return;
+  const handleDeleteCatConfirmed = async () => {
+    if (!confirmCat) return;
     try {
-      const res = await fetch(`/api/v1/categories/${cat.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/categories/${confirmCat.id}`, { method: 'DELETE' });
       if (!res.ok) { const d = await res.json(); toast(d.error ?? 'Error', 'error'); return; }
       toast('Categoría eliminada');
       fetchAll();
     } catch {
       toast('Error de conexión', 'error');
+    } finally {
+      setConfirmCat(null);
     }
   };
 
@@ -289,15 +294,17 @@ export default function CategoriesClient({ rol }: { rol: string }) {
     }
   };
 
-  const handleDeleteSub = async (sub: Subcategory) => {
-    if (!confirm(`¿Eliminar subcategoría "${sub.name}"?`)) return;
+  const handleDeleteSubConfirmed = async () => {
+    if (!confirmSub) return;
     try {
-      const res = await fetch(`/api/v1/subcategories/${sub.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/subcategories/${confirmSub.id}`, { method: 'DELETE' });
       if (!res.ok) { const d = await res.json(); toast(d.error ?? 'Error', 'error'); return; }
       toast('Subcategoría eliminada');
       fetchAll();
     } catch {
       toast('Error de conexión', 'error');
+    } finally {
+      setConfirmSub(null);
     }
   };
 
@@ -396,7 +403,7 @@ export default function CategoriesClient({ rol }: { rol: string }) {
                       </svg>
                     </button>
                     <button
-                      onClick={() => handleDeleteCat(cat)}
+                      onClick={() => setConfirmCat(cat)}
                       className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors"
                       title="Eliminar"
                     >
@@ -436,7 +443,7 @@ export default function CategoriesClient({ rol }: { rol: string }) {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDeleteSub(sub)}
+                                onClick={() => setConfirmSub(sub)}
                                 className="p-1 rounded hover:bg-red-50 text-muted hover:text-red-500 transition-colors"
                               >
                                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -475,6 +482,22 @@ export default function CategoriesClient({ rol }: { rol: string }) {
           ))
         )}
       </div>
+
+      <ConfirmModal
+        open={!!confirmCat}
+        title={`¿Eliminar "${confirmCat?.name}"?`}
+        description="Se eliminarán también sus subcategorías. Esta acción no se puede deshacer."
+        onConfirm={handleDeleteCatConfirmed}
+        onCancel={() => setConfirmCat(null)}
+      />
+
+      <ConfirmModal
+        open={!!confirmSub}
+        title={`¿Eliminar subcategoría "${confirmSub?.name}"?`}
+        description="Esta acción no se puede deshacer."
+        onConfirm={handleDeleteSubConfirmed}
+        onCancel={() => setConfirmSub(null)}
+      />
 
       <CategoryModal
         open={modalOpen}

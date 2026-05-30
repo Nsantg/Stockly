@@ -275,11 +275,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-export default function NewMovementClient({ rol }: { rol: string }) {
+export default function NewMovementClient({ rol, initialType }: { rol: string; initialType?: MovementType | null }) {
   const { toast } = useToast();
   const allowedTypes = ALL_MOVEMENT_TYPES.filter((t) => TYPE_ROLES[t].includes(rol));
 
-  const [selectedType, setSelectedType] = useState<MovementType | null>(null);
+  const [selectedType, setSelectedType] = useState<MovementType | null>(
+    initialType && allowedTypes.includes(initialType) ? initialType : null,
+  );
   const [productQuery, setProductQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
   const [productError, setProductError] = useState('');

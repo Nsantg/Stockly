@@ -332,7 +332,7 @@ function AlertItem({ product, index }: { product: LowStockProduct; index: number
         {isCritical ? 'Sin stock' : `${product.stock} / ${product.minStock}`}
       </span>
       <Link
-        href="/dashboard/movements"
+        href="/dashboard/movements?tab=new&type=ENTRADA"
         className="shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-brand-50 text-brand-500 hover:bg-brand-100 transition-colors"
       >
         Entrada
@@ -364,7 +364,7 @@ function QuickActions({ rol }: { rol: UserRole }) {
       ? [
           {
             label: 'Registrar entrada',
-            href: '/dashboard/movements',
+            href: '/dashboard/movements?tab=new&type=ENTRADA',
             color: 'bg-brand-50 text-brand-500 hover:bg-brand-100',
             icon: (
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -378,7 +378,7 @@ function QuickActions({ rol }: { rol: UserRole }) {
       ? [
           {
             label: 'Nuevo despacho',
-            href: '/dashboard/movements',
+            href: '/dashboard/movements?tab=new&type=VENTA',
             color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
             icon: (
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -412,7 +412,7 @@ function QuickActions({ rol }: { rol: UserRole }) {
     },
     {
       label: 'Movimientos',
-      href: '/dashboard/movements',
+      href: '/dashboard/movements?tab=history',
       color: 'bg-surface text-ink hover:bg-subtle',
       icon: (
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none">

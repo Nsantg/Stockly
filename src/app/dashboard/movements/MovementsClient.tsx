@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import NewMovementClient from './NewMovementClient';
 import MovementHistoryClient from './MovementHistoryClient';
+import type { MovementType } from './types';
 
 type Tab = 'new' | 'history';
 
@@ -10,7 +12,12 @@ const REGISTER_ROLES = ['Admin', 'Almacenista', 'Despachador'];
 
 export default function MovementsClient({ rol }: { rol: string }) {
   const canRegister = REGISTER_ROLES.includes(rol);
-  const [activeTab, setActiveTab] = useState<Tab>(canRegister ? 'new' : 'history');
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get('type') as MovementType | null;
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<Tab>(
+    canRegister && tabParam === 'new' ? 'new' : canRegister ? 'new' : 'history',
+  );
 
   return (
     <div className="space-y-6">
@@ -47,7 +54,7 @@ export default function MovementsClient({ rol }: { rol: string }) {
       </div>
 
       <div className="animate-fade-in-up" style={{ animationDelay: '90ms' }}>
-        {activeTab === 'new' && canRegister && <NewMovementClient rol={rol} />}
+        {activeTab === 'new' && canRegister && <NewMovementClient rol={rol} initialType={typeParam} />}
         {activeTab === 'history' && <MovementHistoryClient rol={rol} />}
       </div>
     </div>

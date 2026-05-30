@@ -1,0 +1,98 @@
+import type { ComponentType } from 'react';
+
+export type NavItem = {
+  label: string;
+  href: string;
+  icon: ComponentType;
+};
+
+export type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+export const rolBadge: Record<string, { bg: string; text: string; dot: string }> = {
+  Admin: { bg: 'bg-brand-50', text: 'text-brand-500', dot: 'bg-brand-500' },
+  Almacenista: { bg: 'bg-accent-50', text: 'text-accent-600', dot: 'bg-accent-500' },
+  Despachador: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  Visualizador: { bg: 'bg-subtle', text: 'text-muted', dot: 'bg-muted' },
+};
+
+function IconDashboard() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <rect x="1.5" y="1.5" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="9.5" y="1.5" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="1.5" y="9.5" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function IconInventory() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <path d="M2 5.5L8 2.5L14 5.5V10.5L8 13.5L2 10.5V5.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M8 2.5V13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M2 5.5L8 8.5L14 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconMovements() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <path d="M2 8H14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M10 4.5L14 8L10 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 4.5L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconClients() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <circle cx="6" cy="4.5" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M1 14C1 11.239 3.239 9 6 9C8.761 9 11 11.239 11 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="11.5" cy="5" r="2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M14 14C14 12.343 12.881 11 11.5 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconUsers() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <circle cx="8" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.5 14C2.5 11.515 4.786 9 8 9C11.214 9 13.5 11.515 13.5 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const baseNavGroups: NavGroup[] = [
+  {
+    label: 'Principal',
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: IconDashboard },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      { label: 'Inventario', href: '/dashboard/inventory', icon: IconInventory },
+      { label: 'Movimientos', href: '/dashboard/movements', icon: IconMovements },
+      { label: 'Clientes', href: '/dashboard/clients', icon: IconClients },
+    ],
+  },
+];
+
+const adminNavGroup: NavGroup = {
+  label: 'Administración',
+  items: [
+    { label: 'Usuarios', href: '/dashboard/users', icon: IconUsers },
+  ],
+};
+
+export function getNavGroups(rol: string): NavGroup[] {
+  return rol === 'Admin' ? [...baseNavGroups, adminNavGroup] : baseNavGroups;
+}

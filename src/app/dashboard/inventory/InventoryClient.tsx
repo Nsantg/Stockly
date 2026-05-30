@@ -200,10 +200,14 @@ export default function InventoryClient({ rol }: { rol: string }) {
       .catch(() => {});
   };
 
-  const handleSaved = () => {
+  const handleSaved = (updated: Product, isNew: boolean) => {
     setPanelOpen(false);
     setEditingProduct(null);
-    fetchProducts();
+    if (isNew) {
+      fetchProducts();
+    } else {
+      setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    }
     refreshSummary();
   };
 
@@ -214,16 +218,19 @@ export default function InventoryClient({ rol }: { rol: string }) {
 
   const handleDeleteConfirmed = async () => {
     if (!confirmTarget) return;
+    const target = confirmTarget;
+    setConfirmTarget(null);
+    setProducts((prev) => prev.filter((p) => p.id !== target.id));
+    setTotal((prev) => prev - 1);
     try {
-      const res = await fetch(`/api/v1/products/${confirmTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/products/${target.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast('Producto eliminado');
-      fetchProducts();
       refreshSummary();
     } catch {
       toast('Error al eliminar producto', 'error');
-    } finally {
-      setConfirmTarget(null);
+      fetchProducts();
+      refreshSummary();
     }
   };
 

@@ -9,7 +9,7 @@ interface Props {
   product: Product | null;
   categories: Category[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (updated: Product, isNew: boolean) => void;
 }
 
 const EMPTY: ProductFormData = {
@@ -113,10 +113,10 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
         minStock: Number(form.minStock),
       };
 
-      const url = product ? `/api/v1/products/${product.id}` : '/api/v1/products';
-      const method = product ? 'PUT' : 'POST';
+      const isNew = !product;
+      const url = isNew ? '/api/v1/products' : `/api/v1/products/${product!.id}`;
       const res = await fetch(url, {
-        method,
+        method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -126,8 +126,28 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
         toast(err.error ?? 'Error al guardar', 'error');
         return;
       }
-      toast(product ? 'Producto actualizado' : 'Producto creado');
-      onSaved();
+
+      const responseData = await res.json();
+      const sub = subcategories.find((s) => s.id === form.subcategoryId);
+      const cat = categories.find((c) => c.id === selectedCategoryId);
+
+      const updated: Product = {
+        id: isNew ? responseData.id : product!.id,
+        code: body.code,
+        name: body.name,
+        barcode: body.barcode,
+        serialNumber: body.serialNumber,
+        weight: body.weight,
+        subcategoryId: form.subcategoryId,
+        subcategory: { ...sub!, category: cat! } as Product['subcategory'],
+        requiresRefrigeration: form.requiresRefrigeration,
+        stock: Number(form.stock),
+        minStock: Number(form.minStock),
+        isActive: true,
+      };
+
+      toast(isNew ? 'Producto creado' : 'Producto actualizado');
+      onSaved(updated, isNew);
     } catch {
       toast('Error de conexión', 'error');
     } finally {

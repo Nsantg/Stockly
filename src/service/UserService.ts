@@ -12,7 +12,16 @@ const createUserSchema = z.object({
   rol: z.nativeEnum(UserRole).optional(),
 });
 
+const updateUserSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es requerido').optional(),
+  apellido: z.string().min(1, 'El apellido es requerido').optional(),
+  email: z.string().email('Email inválido').optional(),
+  rol: z.nativeEnum(UserRole).optional(),
+  isActive: z.boolean().optional(),
+});
+
 export type CreateUserDto = z.infer<typeof createUserSchema>;
+export type UpdateUserDto = z.infer<typeof updateUserSchema>;
 
 class UserService {
   async createUser(data: CreateUserDto): Promise<User> {
@@ -39,6 +48,34 @@ class UserService {
 
   listUsers(): Promise<User[]> {
     return userRepository.findAllActive();
+  }
+
+  getAllUsers(): Promise<User[]> {
+    return userRepository.findAll();
+  }
+
+  async getUserById(id: string): Promise<User> {
+    const user = await userRepository.findById(id);
+    if (!user) throw new Error('Usuario no encontrado');
+    return user;
+  }
+
+  async updateUser(id: string, data: UpdateUserDto): Promise<User> {
+    const user = await this.getUserById(id);
+    const validated = updateUserSchema.parse(data);
+
+    if (validated.email && validated.email !== user.email) {
+      const taken = await userRepository.emailExists(validated.email, id);
+      if (taken) throw new Error('El email ya está en uso');
+    }
+
+    Object.assign(user, validated);
+    return userRepository.save(user);
+  }
+
+  async deactivateUser(id: string): Promise<void> {
+    await this.getUserById(id);
+    await userRepository.deactivate(id);
   }
 }
 

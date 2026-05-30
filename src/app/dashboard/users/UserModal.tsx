@@ -8,50 +8,25 @@ interface RoleOption {
   value: UserRole;
   label: string;
   description: string;
-  bg: string;
-  activeBg: string;
-  activeText: string;
-  activeBorder: string;
 }
 
 const ROLES: RoleOption[] = [
-  {
-    value: 'Admin',
-    label: 'Admin',
-    description: 'Acceso completo al sistema',
-    bg: 'bg-brand-50',
-    activeBg: 'bg-brand-500',
-    activeText: 'text-white',
-    activeBorder: 'border-brand-500',
-  },
-  {
-    value: 'Almacenista',
-    label: 'Almacenista',
-    description: 'Gestión de inventario y movimientos',
-    bg: 'bg-accent-50',
-    activeBg: 'bg-accent-600',
-    activeText: 'text-white',
-    activeBorder: 'border-accent-600',
-  },
-  {
-    value: 'Despachador',
-    label: 'Despachador',
-    description: 'Registro de ventas y despachos',
-    bg: 'bg-emerald-50',
-    activeBg: 'bg-emerald-600',
-    activeText: 'text-white',
-    activeBorder: 'border-emerald-600',
-  },
-  {
-    value: 'Visualizador',
-    label: 'Visualizador',
-    description: 'Solo lectura del sistema',
-    bg: 'bg-subtle',
-    activeBg: 'bg-ink',
-    activeText: 'text-white',
-    activeBorder: 'border-ink',
-  },
+  { value: 'Admin', label: 'Admin', description: 'Acceso completo al sistema' },
+  { value: 'Almacenista', label: 'Almacenista', description: 'Gestión de inventario y movimientos' },
+  { value: 'Despachador', label: 'Despachador', description: 'Registro de ventas y despachos' },
+  { value: 'Visualizador', label: 'Visualizador', description: 'Solo lectura del sistema' },
 ];
+
+function roleButtonClass(role: UserRole, selected: boolean): string {
+  if (!selected) return 'bg-white border-line hover:border-brand-200 text-ink';
+  const map: Record<UserRole, string> = {
+    Admin: 'bg-brand-500 border-brand-500 text-white',
+    Almacenista: 'bg-accent-600 border-accent-600 text-white',
+    Despachador: 'bg-emerald-600 border-emerald-600 text-white',
+    Visualizador: 'bg-ink border-ink text-white',
+  };
+  return map[role];
+}
 
 const EMPTY_FORM: UserFormData = {
   nombre: '',
@@ -234,14 +209,10 @@ export default function UserModal({
                     key={role.value}
                     type="button"
                     onClick={() => setForm((p) => ({ ...p, rol: role.value }))}
-                    className={`text-left px-3 py-3 rounded-xl border-2 transition-all ${
-                      selected
-                        ? `${role.activeBg} ${role.activeText} ${role.activeBorder}`
-                        : `bg-white border-line hover:border-brand-200 ${role.bg} hover:${role.bg}`
-                    }`}
+                    className={`text-left px-3 py-3 rounded-xl border-2 transition-all ${roleButtonClass(role.value, selected)}`}
                   >
-                    <p className={`text-xs font-semibold ${selected ? role.activeText : 'text-ink'}`}>{role.label}</p>
-                    <p className={`text-xs mt-0.5 ${selected ? `${role.activeText} opacity-80` : 'text-muted'}`}>{role.description}</p>
+                    <p className="text-xs font-semibold">{role.label}</p>
+                    <p className={`text-xs mt-0.5 ${selected ? 'opacity-80' : 'text-muted'}`}>{role.description}</p>
                   </button>
                 );
               })}

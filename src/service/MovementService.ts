@@ -56,7 +56,9 @@ const STOCK_DIRECTION: Record<MovementType, number> = {
 };
 
 class MovementService {
-  async createMovement(dto: CreateMovementDto): Promise<Movement> {
+  async createMovement(
+    dto: CreateMovementDto,
+  ): Promise<{ movement: Movement; warning: string | null }> {
     const data = createMovementSchema.parse(dto);
 
     const product = await productRepository.findById(data.productId);
@@ -73,9 +75,13 @@ class MovementService {
     await queryRunner.startTransaction();
 
     try {
-      const movement = await handler.execute(data, product, queryRunner);
+      const created = await handler.execute(data, product, queryRunner);
       await queryRunner.commitTransaction();
-      return this.getMovementById(movement.id);
+      const movement = await this.getMovementById(created.id);
+      const warning = product.requiresRefrigeration
+        ? 'Este producto requiere refrigeración. Verifique que se mantenga la cadena de frío.'
+        : null;
+      return { movement, warning };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

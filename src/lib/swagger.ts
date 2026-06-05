@@ -334,6 +334,92 @@ const definition: swaggerJsdoc.OAS3Definition = {
           totalWeight: { type: 'number', example: 8.0 },
         },
       },
+      StockAlert: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['STOCK_CRITICAL'], example: 'STOCK_CRITICAL' },
+          productId: { type: 'string', format: 'uuid' },
+          productName: { type: 'string', example: 'Jeringas 5ml' },
+          stock: { type: 'integer', example: 5 },
+          minStock: { type: 'integer', example: 20 },
+          message: { type: 'string', example: 'Stock crítico: Jeringas 5ml tiene 5 unidades (mínimo: 20)' },
+          level: { type: 'string', enum: ['CRITICAL'], example: 'CRITICAL' },
+        },
+      },
+      ExpirationAlert: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['EXPIRATION_WARNING'], example: 'EXPIRATION_WARNING' },
+          lotId: { type: 'string', format: 'uuid' },
+          lotNumber: { type: 'string', example: 'LOT-2024-001' },
+          productId: { type: 'string', format: 'uuid' },
+          productName: { type: 'string', example: 'Solución Salina' },
+          expirationDate: { type: 'string', format: 'date-time' },
+          daysUntilExpiration: { type: 'integer', example: 5 },
+          stock: { type: 'integer', example: 200 },
+          level: { type: 'string', enum: ['WARNING', 'CRITICAL'], example: 'WARNING' },
+        },
+      },
+      AlertSummary: {
+        type: 'object',
+        properties: {
+          stockAlerts: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/StockAlert' },
+          },
+          expirationAlerts: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/ExpirationAlert' },
+          },
+          totalCritical: { type: 'integer', example: 3 },
+          totalWarnings: { type: 'integer', example: 5 },
+        },
+      },
+      DashboardKpis: {
+        type: 'object',
+        properties: {
+          dispatchedUnits: { type: 'integer', example: 450 },
+          dispatchCount: { type: 'integer', example: 38 },
+          entryCount: { type: 'integer', example: 12 },
+          topClient: {
+            nullable: true,
+            type: 'object',
+            properties: {
+              clientId: { type: 'string', format: 'uuid' },
+              clientName: { type: 'string', example: 'María Gómez' },
+              totalPurchases: { type: 'integer', example: 120 },
+            },
+          },
+          maxStockProduct: {
+            nullable: true,
+            type: 'object',
+            properties: {
+              productId: { type: 'string', format: 'uuid' },
+              productName: { type: 'string', example: 'Gasas Estériles' },
+              stock: { type: 'integer', example: 500 },
+            },
+          },
+          minStockProduct: {
+            nullable: true,
+            type: 'object',
+            properties: {
+              productId: { type: 'string', format: 'uuid' },
+              productName: { type: 'string', example: 'Jeringas 5ml' },
+              stock: { type: 'integer', example: 2 },
+            },
+          },
+          stockPercentage: { type: 'number', example: 87.5 },
+          topRotationProduct: {
+            nullable: true,
+            type: 'object',
+            properties: {
+              productId: { type: 'string', format: 'uuid' },
+              productName: { type: 'string', example: 'Solución Salina' },
+              totalDispatched: { type: 'integer', example: 200 },
+            },
+          },
+        },
+      },
     },
   },
   security: [{ cookieAuth: [] }],

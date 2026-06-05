@@ -157,11 +157,11 @@ class MovementController {
         );
       }
 
-      const movement = await movementService.createMovement({
+      const result = await movementService.createMovement({
         ...body,
         userId: auth.session.user.id,
       });
-      return NextResponse.json(movement, { status: 201 });
+      return NextResponse.json(result, { status: 201 });
     } catch (error) {
       return handleError(error);
     }

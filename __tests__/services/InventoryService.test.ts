@@ -46,10 +46,11 @@ describe('InventoryService - Lógica de Negocio (TDD)', () => {
       ];
       (lotRepository.findByProductId as jest.Mock).mockResolvedValue(mockLots);
 
-      const loteSeleccionado = await inventoryService.getNextLotForDispatch(1);
+      const loteSeleccionado = await inventoryService.getNextLotForDispatch('1');
 
-      expect(lotRepository.findByProductId).toHaveBeenCalledWith(1);
-      expect(loteSeleccionado.id).toBe('L-001');
+      expect(lotRepository.findByProductId).toHaveBeenCalledWith('1');
+      expect(loteSeleccionado).not.toBeNull();
+      expect(loteSeleccionado!.id).toBe('L-001');
     });
   });
 });

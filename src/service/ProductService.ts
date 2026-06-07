@@ -18,6 +18,7 @@ export const createProductSchema = z.object({
 export const updateProductSchema = createProductSchema.partial();
 
 export type CreateProductDto = z.infer<typeof createProductSchema>;
+export type CreateProductInputDto = z.input<typeof createProductSchema>;
 export type UpdateProductDto = z.infer<typeof updateProductSchema>;
 
 export interface InventorySummary {
@@ -27,7 +28,7 @@ export interface InventorySummary {
 }
 
 class ProductService {
-  async createProduct(dto: CreateProductDto): Promise<Product> {
+  async createProduct(dto: CreateProductInputDto): Promise<Product> {
     const data = createProductSchema.parse(dto);
 
     const codeExists = await productRepository.existsByCode(data.code);

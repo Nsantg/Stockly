@@ -16,7 +16,7 @@ import {
 import { clearSessionMock, mockNoSession, mockSession } from './helpers/sessionMock';
 
 describe('Integración API /api/v1/movements', () => {
-  let agent: supertest.SuperTest;
+  let agent: ReturnType<typeof supertest>;
   let dataSource: DataSource;
 
   beforeAll(async () => {

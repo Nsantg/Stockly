@@ -11,8 +11,8 @@ export function createQueryRunnerMock(movementId = BDD_MOVEMENT_ID): QueryRunner
     release: jest.fn(),
     manager: {
       save: jest.fn().mockImplementation(async (_entity, data: Movement) => ({
-        id: movementId,
         ...data,
+        id: movementId,
       })),
       findOne: jest.fn(),
     },

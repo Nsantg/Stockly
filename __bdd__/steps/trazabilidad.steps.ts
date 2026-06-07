@@ -56,7 +56,7 @@ defineFeature(feature, (test) => {
     (queryRunner.manager.save as jest.Mock).mockImplementation(
       async (_entity: unknown, data: Partial<Movement>) => {
         Object.assign(existingMovement, data);
-        return { id: BDD_MOVEMENT_ID, ...existingMovement };
+        return { ...existingMovement, id: BDD_MOVEMENT_ID };
       },
     );
     (movementRepository.findById as jest.Mock).mockImplementation(async (id: string) => {

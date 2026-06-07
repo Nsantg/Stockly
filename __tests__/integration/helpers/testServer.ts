@@ -5,7 +5,8 @@ import { POST as postMovement } from '../../../src/app/api/v1/movements/route';
 import { PATCH as patchAnnulMovement } from '../../../src/app/api/v1/movements/[id]/annul/route';
 
 let server: Server | null = null;
-let agent: supertest.SuperTest | null = null;
+type SuperTestAgent = ReturnType<typeof supertest>;
+let agent: SuperTestAgent | null = null;
 
 function readRequestBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -59,7 +60,7 @@ async function routeRequest(req: IncomingMessage, res: ServerResponse): Promise<
   res.end(JSON.stringify({ error: 'Ruta no encontrada en servidor de prueba' }));
 }
 
-export async function startTestServer(): Promise<supertest.SuperTest> {
+export async function startTestServer(): Promise<SuperTestAgent> {
   if (agent) {
     return agent;
   }

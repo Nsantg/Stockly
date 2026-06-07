@@ -96,6 +96,43 @@ function IconBoxIn() {
   )
 }
 
+function IconStar() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2L10.9 7.2H16.4L11.8 10.5L13.5 15.8L9 12.5L4.5 15.8L6.2 10.5L1.6 7.2H7.1L9 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconRotate() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 9C3 5.686 5.686 3 9 3C11.2 3 13.1 4.2 14.2 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M15 9C15 12.314 12.314 15 9 15C6.8 15 4.9 13.8 3.8 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M14 3V6.5H10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 15V11.5H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconTrendUp() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 13L7 8L10 11L16 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 5H16V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconTrendDown() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 5L7 10L10 7L16 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 13H16V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function IconGauge() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -159,6 +196,50 @@ function KpiCard({ icon, label, value, delay, children }: {
   )
 }
 
+function DataSkeleton({ delay }: { delay: number }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-card-sm p-5 animate-fade-in-up" style={{ animationDelay: `${delay}ms` }}>
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-subtle animate-pulse shrink-0" />
+        <div className="flex-1">
+          <div className="h-2.5 bg-subtle rounded animate-pulse w-16 mb-2.5" />
+          <div className="h-3.5 bg-subtle rounded animate-pulse w-36 mb-1.5" />
+          <div className="h-2.5 bg-subtle rounded animate-pulse w-24" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DataCard({ icon, iconBg, label, title, subtitle, badge, delay }: {
+  icon: React.ReactNode
+  iconBg?: string
+  label: string
+  title: string
+  subtitle?: string
+  badge?: React.ReactNode
+  delay: number
+}) {
+  return (
+    <div
+      className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5 hover:shadow-card transition-shadow duration-200"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${iconBg ?? 'bg-brand-50 text-brand-500'}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-0.5">{label}</p>
+          <p className="text-sm font-semibold text-ink truncate">{title}</p>
+          {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
+        </div>
+        {badge && <div className="shrink-0 mt-0.5">{badge}</div>}
+      </div>
+    </div>
+  )
+}
+
 function PeriodSelector({ active, onChange }: { active: Period; onChange: (p: Period) => void }) {
   return (
     <div className="flex gap-1 p-1 bg-subtle rounded-xl shrink-0 flex-wrap sm:flex-nowrap">
@@ -177,6 +258,14 @@ function PeriodSelector({ active, onChange }: { active: Period; onChange: (p: Pe
       ))}
     </div>
   )
+}
+
+function minStockBadge(stock: number) {
+  if (stock === 0)
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Sin stock</span>
+  if (stock < 10)
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-600 border border-accent-100">Bajo</span>
+  return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Ok</span>
 }
 
 export default function DashboardClient({ user }: { user: DashboardUser }) {
@@ -227,6 +316,60 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
             <KpiCard icon={<IconGauge />} label="Productos con stock" value={`${kpis.stockPercentage.toFixed(1)}%`} delay={240}>
               <ArcProgress value={kpis.stockPercentage} />
             </KpiCard>
+          </>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {kpis === null ? (
+          <>
+            <DataSkeleton delay={0} />
+            <DataSkeleton delay={80} />
+            <DataSkeleton delay={160} />
+            <DataSkeleton delay={240} />
+          </>
+        ) : (
+          <>
+            <DataCard
+              icon={<IconStar />}
+              label="Top cliente"
+              title={kpis.topClient?.clientName ?? 'Sin datos para el periodo'}
+              subtitle={kpis.topClient ? `${kpis.topClient.totalPurchases.toLocaleString('es-CO')} unidades compradas` : undefined}
+              delay={0}
+            />
+            <DataCard
+              icon={<IconRotate />}
+              label="Rotación destacada"
+              title={kpis.topRotationProduct?.productName ?? 'Sin datos'}
+              subtitle={kpis.topRotationProduct ? `${kpis.topRotationProduct.totalDispatched.toLocaleString('es-CO')} unidades despachadas` : undefined}
+              delay={80}
+            />
+            <DataCard
+              icon={<IconTrendUp />}
+              iconBg="bg-emerald-50 text-emerald-600"
+              label="Mayor stock"
+              title={kpis.maxStockProduct?.productName ?? 'Sin datos'}
+              subtitle={kpis.maxStockProduct ? `${kpis.maxStockProduct.stock.toLocaleString('es-CO')} unidades` : undefined}
+              badge={kpis.maxStockProduct
+                ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Alto</span>
+                : undefined}
+              delay={160}
+            />
+            <DataCard
+              icon={<IconTrendDown />}
+              iconBg={kpis.minStockProduct
+                ? kpis.minStockProduct.stock === 0
+                  ? 'bg-red-50 text-red-500'
+                  : kpis.minStockProduct.stock < 10
+                    ? 'bg-accent-50 text-accent-500'
+                    : 'bg-emerald-50 text-emerald-600'
+                : 'bg-brand-50 text-brand-500'}
+              label="Menor stock"
+              title={kpis.minStockProduct?.productName ?? 'Sin datos'}
+              subtitle={kpis.minStockProduct ? `${kpis.minStockProduct.stock.toLocaleString('es-CO')} unidades` : undefined}
+              badge={kpis.minStockProduct ? minStockBadge(kpis.minStockProduct.stock) : undefined}
+              delay={240}
+            />
           </>
         )}
       </div>

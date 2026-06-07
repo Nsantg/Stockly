@@ -102,5 +102,21 @@ describe('DevolucionHandler - CP-15 / CP-16 (RN-04)', () => {
       expect(movement.returnCause).toBe('Producto defectuoso');
       expect(movement.clientId).toBe(TEST_CLIENT_ID);
     });
+
+    it('execute persiste null en returnDescription cuando no se envía', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.DEVOLUCION,
+        quantity: 1,
+        clientId: TEST_CLIENT_ID,
+        returnCause: 'Producto defectuoso',
+        returnDescription: undefined,
+      });
+      const product = buildProduct({ allowsSerialNumber: true, stock: 10 });
+      const queryRunner = createMockQueryRunner();
+
+      const movement = await handler.execute(dto, product, queryRunner);
+
+      expect(movement.returnDescription).toBeNull();
+    });
   });
 });

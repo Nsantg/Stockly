@@ -89,5 +89,18 @@ describe('VentaHandler - CP-10 / CP-11 (RN-06)', () => {
       expect(movement.clientType).toBe(ClientType.MAYORISTA);
       expect(movement.totalWeight).toBe(2.5);
     });
+
+    it('execute persiste null en campos opcionales no enviados', async () => {
+      const dto = buildMovementDto({
+        quantity: 1,
+        totalWeight: undefined,
+      });
+      const product = buildProduct({ stock: 50 });
+      const queryRunner = createMockQueryRunner();
+
+      const movement = await handler.execute(dto, product, queryRunner);
+
+      expect(movement.totalWeight).toBeNull();
+    });
   });
 });

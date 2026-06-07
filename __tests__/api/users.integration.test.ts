@@ -38,7 +38,7 @@ describe('UserController - Restricción de Roles', () => {
     });
   });
 
-  it.skip('Debe denegar la creación de un rol ADMIN si el usuario actual NO está logueado', async () => {
+  it('Debe denegar la creación de un rol ADMIN si el usuario actual NO está logueado', async () => {
     (getServerSession as jest.Mock).mockResolvedValue(null);
 
     const response = await userController.createUser(
@@ -48,10 +48,11 @@ describe('UserController - Restricción de Roles', () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error).toBe('No autorizado');
+    expect(body.details).toContain('sesión activa');
     expect(userService.createUser).not.toHaveBeenCalled();
   });
 
-  it.skip('Debe denegar la creación de un rol ADMIN si el usuario actual NO es ADMIN', async () => {
+  it('Debe denegar la creación de un rol ADMIN si el usuario actual NO es ADMIN', async () => {
     (getServerSession as jest.Mock).mockResolvedValue({
       user: { rol: UserRole.DESPACHADOR },
     });
@@ -62,7 +63,8 @@ describe('UserController - Restricción de Roles', () => {
 
     expect(response.status).toBe(403);
     const body = await response.json();
-    expect(body.error).toBe('Solo un Admin puede crear usuarios con este rol');
+    expect(body.error).toBe('Acceso prohibido');
+    expect(body.details).toContain(UserRole.ADMIN);
     expect(userService.createUser).not.toHaveBeenCalled();
   });
 

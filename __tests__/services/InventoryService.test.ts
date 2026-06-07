@@ -1,13 +1,55 @@
 import { inventoryService } from '../../src/service/InventoryService';
 import { productRepository } from '../../src/repository/ProductRepository';
 import { lotRepository } from '../../src/repository/LotRepository';
+import { productService } from '../../src/service/ProductService';
 
 jest.mock('../../src/repository/ProductRepository');
 jest.mock('../../src/repository/LotRepository');
+jest.mock('../../src/service/ProductService');
 
 describe('InventoryService - Lógica de Negocio (TDD)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('Gestión básica de inventario', () => {
+    it('Debe crear un producto correctamente (createProduct)', async () => {
+      const productData = {
+        code: 'MED-002',
+        name: 'Gasa Estéril',
+        subcategoryId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        minStock: 20,
+      };
+      const savedProduct = { id: 'uuid-2', stock: 0, ...productData };
+
+      (productService.createProduct as jest.Mock).mockResolvedValue(savedProduct);
+
+      const result = await inventoryService.createProduct(productData);
+
+      expect(productService.createProduct).toHaveBeenCalledWith(productData);
+      expect(result.id).toBe('uuid-2');
+      expect(result.code).toBe('MED-002');
+      expect(result.name).toBe('Gasa Estéril');
+    });
+
+    it('Debe listar todo el inventario (listInventory)', async () => {
+      const mockInventoryList = [
+        { id: 'uuid-1', name: 'Camilla', stock: 5 },
+        { id: 'uuid-2', name: 'Gasa Estéril', stock: 50 },
+      ];
+      (productService.getAllProducts as jest.Mock).mockResolvedValue({
+        data: mockInventoryList,
+        total: 2,
+      });
+
+      const result = await inventoryService.listInventory();
+
+      expect(productService.getAllProducts).toHaveBeenCalledWith({});
+      expect(productService.getAllProducts).toHaveBeenCalledTimes(1);
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('Camilla');
+      expect(result[1].name).toBe('Gasa Estéril');
+    });
   });
 
   describe('Alertas de Stock - N2026-30 / CP-27', () => {

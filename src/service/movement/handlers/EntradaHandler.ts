@@ -5,7 +5,7 @@ import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
 
 export class EntradaHandler extends BaseMovementHandler {
-  async validate(): Promise<void> {}
+  async validate(_dto: CreateMovementDto, _product: Product): Promise<void> {}
 
   async execute(
     dto: CreateMovementDto,

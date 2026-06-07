@@ -1,4 +1,4 @@
-import { productService, CreateProductDto } from './ProductService';
+import { productService, CreateProductInputDto } from './ProductService';
 import { productRepository } from '../repository/ProductRepository';
 import { lotRepository } from '../repository/LotRepository';
 import { Product } from '../entity/Product';
@@ -14,7 +14,7 @@ export interface StockAlert {
 }
 
 class InventoryService {
-  createProduct(dto: CreateProductDto): Promise<Product> {
+  createProduct(dto: CreateProductInputDto): Promise<Product> {
     return productService.createProduct(dto);
   }
 

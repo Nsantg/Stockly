@@ -5,7 +5,7 @@ import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
 
 export class AjusteIngresoHandler extends BaseMovementHandler {
-  async validate(dto: CreateMovementDto): Promise<void> {
+  async validate(dto: CreateMovementDto, _product: Product): Promise<void> {
     if (!dto.observations) {
       throw new Error('El ajuste de ingreso requiere un motivo en observations');
     }

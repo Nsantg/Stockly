@@ -1,4 +1,4 @@
-process.env.NODE_ENV = 'test';
+Object.assign(process.env, { NODE_ENV: 'test' });
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

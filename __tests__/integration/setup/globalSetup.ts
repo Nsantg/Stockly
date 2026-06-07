@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 config({ path: resolve(process.cwd(), '.env') });
 
-process.env.NODE_ENV = 'test';
+Object.assign(process.env, { NODE_ENV: 'test' });
 process.env.DATABASE_NAME = process.env.DATABASE_NAME ?? 'stockly_test';
 process.env.TYPEORM_CLI = 'true';
 

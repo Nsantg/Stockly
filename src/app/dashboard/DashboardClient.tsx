@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useToast } from '@/components/ui/Toast'
 
 export type UserRole = 'Admin' | 'Almacenista' | 'Despachador' | 'Visualizador'
+
+type Period = 'today' | 'week' | 'month' | 'year'
+
 type MovementType =
   | 'ENTRADA'
   | 'VENTA'
@@ -14,41 +18,17 @@ type MovementType =
   | 'AJUSTE_SALIDA'
   | 'TRASLADO'
 
-interface DashboardUser {
-  nombre: string
-  apellido: string
-  rol: UserRole
-}
-
-interface ProductSummary {
-  totalProducts: number
-  totalStock: number
-  lowStockCount: number
-}
-
-interface LowStockProduct {
-  id: string
-  code: string
-  name: string
-  stock: number
-  minStock: number
-}
-
 interface RecentMovement {
   id: string
   type: MovementType
   product: { name: string }
-  user: { nombre: string; apellido: string }
+  quantity: number
   date: string
 }
 
 interface MovementsResponse {
   data: RecentMovement[]
   total: number
-}
-
-interface ProductsResponse {
-  data: LowStockProduct[]
 }
 
 const TYPE_LABELS: Record<MovementType, string> = {
@@ -73,15 +53,67 @@ const TYPE_BADGE: Record<MovementType, string> = {
   TRASLADO: 'bg-slate-50 text-slate-600 border-slate-100',
 }
 
-const TYPE_BAR_COLOR: Record<MovementType, string> = {
-  ENTRADA: '#1B3B6F',
-  VENTA: '#059669',
-  DAÑO: '#DC2626',
-  VENCIMIENTO: '#EA580C',
-  DEVOLUCION: '#9333EA',
-  AJUSTE_INGRESO: '#0D9488',
-  AJUSTE_SALIDA: '#D97706',
-  TRASLADO: '#475569',
+interface DashboardUser {
+  nombre: string
+  apellido: string
+  rol: UserRole
+}
+
+interface DashboardKpis {
+  dispatchedUnits: number
+  dispatchCount: number
+  entryCount: number
+  topClient: { clientId: string; clientName: string; totalPurchases: number } | null
+  maxStockProduct: { productId: string; productName: string; stock: number } | null
+  minStockProduct: { productId: string; productName: string; stock: number } | null
+  stockPercentage: number
+  topRotationProduct: { productId: string; productName: string; totalDispatched: number } | null
+}
+
+const DEFAULT_KPIS: DashboardKpis = {
+  dispatchedUnits: 0,
+  dispatchCount: 0,
+  entryCount: 0,
+  topClient: null,
+  maxStockProduct: null,
+  minStockProduct: null,
+  stockPercentage: 0,
+  topRotationProduct: null,
+}
+
+const PERIODS: { id: Period; label: string }[] = [
+  { id: 'today', label: 'Hoy' },
+  { id: 'week', label: 'Esta semana' },
+  { id: 'month', label: 'Este mes' },
+  { id: 'year', label: 'Este año' },
+]
+
+function getPeriodDates(period: Period): { startDate: string; endDate: string } {
+  const now = new Date()
+  const end = new Date(now)
+  end.setUTCHours(23, 59, 59, 999)
+  const start = new Date(now)
+  start.setUTCHours(0, 0, 0, 0)
+  if (period === 'week') {
+    const day = start.getUTCDay()
+    start.setUTCDate(start.getUTCDate() - (day === 0 ? 6 : day - 1))
+  } else if (period === 'month') {
+    start.setUTCDate(1)
+  } else if (period === 'year') {
+    start.setUTCMonth(0, 1)
+  }
+  return { startDate: start.toISOString(), endDate: end.toISOString() }
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'hace un momento'
+  if (mins < 60) return `hace ${mins} min`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `hace ${hrs}h`
+  const days = Math.floor(hrs / 24)
+  return `hace ${days} día${days > 1 ? 's' : ''}`
 }
 
 function getGreeting(nombre: string): string {
@@ -91,174 +123,209 @@ function getGreeting(nombre: string): string {
   return `Buenas noches, ${nombre}`
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'hace un momento'
-  if (mins < 60) return `hace ${mins}m`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `hace ${hrs}h`
-  return `hace ${Math.floor(hrs / 24)}d`
-}
-
-function IconBox() {
+function IconBoxOut() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M3 7.5L10 4L17 7.5V13L10 16.5L3 13V7.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M10 4V16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M3 7.5L10 11L17 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 3L15.5 6.5V11.5L9 15L2.5 11.5V6.5L9 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 3V15M2.5 6.5L9 10L15.5 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M14 12.5L16.5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }
 
-function IconWarehouse() {
+function IconDocument() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M2 18V9L10 3L18 9V18" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <rect x="7" y="11" width="6" height="7" rx="1" stroke="currentColor" strokeWidth="1.6" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M4 2H11L15 6V16H4V2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M11 2V6H15" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M7 9H12M7 12H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }
 
-function IconAlert() {
+function IconBoxIn() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M10 3L18 16H2L10 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M10 9V12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <circle cx="10" cy="14.5" r="0.8" fill="currentColor" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 3L15.5 6.5V11.5L9 15L2.5 11.5V6.5L9 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 3V15M2.5 6.5L9 10L15.5 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9 6.5V10M7.5 8.5L9 10L10.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function IconTruck() {
+function IconStar() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <rect x="1" y="6" width="11" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M12 9H15.5L18 12V15H12V9Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <circle cx="5" cy="15.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="15" cy="15.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2L10.9 7.2H16.4L11.8 10.5L13.5 15.8L9 12.5L4.5 15.8L6.2 10.5L1.6 7.2H7.1L9 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function IconCheck() {
+function IconRotate() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M4 10L8.5 14.5L16 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 9C3 5.686 5.686 3 9 3C11.2 3 13.1 4.2 14.2 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M15 9C15 12.314 12.314 15 9 15C6.8 15 4.9 13.8 3.8 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M14 3V6.5H10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 15V11.5H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function KpiCard({
-  icon,
-  label,
-  value,
-  accent,
-  delay,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number | string
-  accent?: boolean
-  delay: number
-}) {
+function IconTrendUp() {
   return (
-    <div
-      className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div
-        className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${
-          accent ? 'bg-accent-50 text-accent-500' : 'bg-brand-50 text-brand-500'
-        }`}
-      >
-        {icon}
-      </div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1.5">{label}</p>
-      <p
-        className={`text-3xl font-bold tracking-tight ${
-          accent ? 'text-accent-500' : 'text-ink'
-        }`}
-      >
-        {value}
-      </p>
-    </div>
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 13L7 8L10 11L16 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 5H16V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconTrendDown() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 5L7 10L10 7L16 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 13H16V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconGauge() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 14C3 10.134 5.686 7 9 7C12.314 7 15 10.134 15 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9 14L7 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="9" cy="14" r="0.9" fill="currentColor" />
+    </svg>
+  )
+}
+
+function ArcProgress({ value }: { value: number }) {
+  const fill = Math.min(Math.max(value, 0), 100)
+  const color = fill >= 80 ? '#059669' : fill >= 50 ? '#E07B39' : '#DC2626'
+  return (
+    <svg width="52" height="30" viewBox="0 0 52 30" className="mt-2">
+      <path d="M4 28 A22 22 0 0 1 48 28" fill="none" stroke="#F2F2F7" strokeWidth="5" strokeLinecap="round" pathLength={100} />
+      <path
+        d="M4 28 A22 22 0 0 1 48 28"
+        fill="none"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+        pathLength={100}
+        strokeDasharray={100}
+        strokeDashoffset={100 - fill}
+        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+      />
+    </svg>
   )
 }
 
 function KpiSkeleton({ delay }: { delay: number }) {
   return (
+    <div className="bg-white rounded-2xl shadow-card-sm p-5 animate-fade-in-up" style={{ animationDelay: `${delay}ms` }}>
+      <div className="w-9 h-9 rounded-xl bg-subtle animate-pulse mb-4" />
+      <div className="h-2.5 bg-subtle rounded animate-pulse w-24 mb-2" />
+      <div className="h-7 bg-subtle rounded animate-pulse w-14" />
+    </div>
+  )
+}
+
+function KpiCard({ icon, label, value, delay, children }: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  delay: number
+  children?: React.ReactNode
+}) {
+  return (
     <div
-      className="bg-white rounded-2xl shadow-card p-6 animate-fade-in-up"
+      className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5 hover:shadow-card transition-shadow duration-200"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="w-10 h-10 rounded-xl bg-subtle animate-pulse mb-4" />
-      <div className="h-3 bg-subtle rounded animate-pulse w-24 mb-3" />
-      <div className="h-8 bg-subtle rounded animate-pulse w-14" />
+      <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center mb-4">
+        {icon}
+      </div>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-1.5">{label}</p>
+      <p className="text-2xl font-bold text-ink tracking-tight leading-none">{value}</p>
+      {children}
     </div>
   )
 }
 
-function BarChart({ typeCounts }: { typeCounts: Partial<Record<MovementType, number>> }) {
-  const entries = (Object.entries(typeCounts) as [MovementType, number][]).filter(
-    ([, v]) => v > 0,
-  )
-
-  if (entries.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-32 text-sm text-muted">
-        Sin movimientos en la última semana
-      </div>
-    )
-  }
-
-  const max = Math.max(...entries.map(([, v]) => v))
-  const CHART_H = 112
-
+function DataSkeleton({ delay }: { delay: number }) {
   return (
-    <div className="overflow-x-auto -mx-1">
-      <div className="flex items-end gap-4 px-1 min-w-max" style={{ height: 152 }}>
-        {entries.map(([type, count]) => {
-          const barH = Math.max(6, Math.round((count / max) * CHART_H))
-          return (
-            <div
-              key={type}
-              className="flex flex-col items-center gap-1.5 group"
-              style={{ minWidth: 44 }}
-            >
-              <span className="text-xs font-semibold text-ink opacity-0 group-hover:opacity-100 transition-opacity select-none">
-                {count}
-              </span>
-              <div
-                className="w-9 rounded-t-md transition-all duration-500"
-                style={{ height: barH, backgroundColor: TYPE_BAR_COLOR[type] }}
-                title={`${TYPE_LABELS[type]}: ${count}`}
-              />
-              <span className="text-[10px] text-muted font-medium text-center leading-tight" style={{ maxWidth: 44 }}>
-                {TYPE_LABELS[type]}
-              </span>
-            </div>
-          )
-        })}
+    <div className="bg-white rounded-2xl shadow-card-sm p-5 animate-fade-in-up" style={{ animationDelay: `${delay}ms` }}>
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-subtle animate-pulse shrink-0" />
+        <div className="flex-1">
+          <div className="h-2.5 bg-subtle rounded animate-pulse w-16 mb-2.5" />
+          <div className="h-3.5 bg-subtle rounded animate-pulse w-36 mb-1.5" />
+          <div className="h-2.5 bg-subtle rounded animate-pulse w-24" />
+        </div>
       </div>
     </div>
   )
 }
 
-function ChartSkeleton() {
-  const heights = [70, 110, 45, 90, 30, 75, 55]
+function DataCard({ icon, iconBg, label, title, subtitle, badge, delay }: {
+  icon: React.ReactNode
+  iconBg?: string
+  label: string
+  title: string
+  subtitle?: string
+  badge?: React.ReactNode
+  delay: number
+}) {
   return (
-    <div className="flex items-end gap-4 px-1" style={{ height: 152 }}>
-      {heights.map((h, i) => (
-        <div key={i} className="flex flex-col items-center gap-1.5" style={{ minWidth: 44 }}>
-          <div
-            className="w-9 rounded-t-md bg-subtle animate-pulse"
-            style={{ height: h, animationDelay: `${i * 55}ms` }}
-          />
-          <div
-            className="h-2.5 bg-subtle rounded animate-pulse w-9"
-            style={{ animationDelay: `${i * 55}ms` }}
-          />
+    <div
+      className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5 hover:shadow-card transition-shadow duration-200"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${iconBg ?? 'bg-brand-50 text-brand-500'}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-0.5">{label}</p>
+          <p className="text-sm font-semibold text-ink truncate">{title}</p>
+          {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
+        </div>
+        {badge && <div className="shrink-0 mt-0.5">{badge}</div>}
+      </div>
+    </div>
+  )
+}
+
+function PeriodSelector({ active, onChange }: { active: Period; onChange: (p: Period) => void }) {
+  return (
+    <div className="flex gap-1 p-1 bg-subtle rounded-xl shrink-0 flex-wrap sm:flex-nowrap">
+      {PERIODS.map(({ id, label }) => (
+        <button
+          key={id}
+          onClick={() => onChange(id)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
+            active === id
+              ? 'bg-brand-500 text-white shadow-sm'
+              : 'text-muted hover:text-ink hover:bg-white/60'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ActivitySkeleton() {
+  return (
+    <div>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 py-2.5 border-b border-subtle last:border-0" style={{ animationDelay: `${i * 50}ms` }}>
+          <div className="h-5 bg-subtle rounded-full w-16 animate-pulse shrink-0" />
+          <div className="h-3 bg-subtle rounded animate-pulse flex-1" />
+          <div className="h-3 bg-subtle rounded animate-pulse w-10 shrink-0" />
+          <div className="h-3 bg-subtle rounded animate-pulse w-16 shrink-0" />
         </div>
       ))}
     </div>
@@ -268,275 +335,74 @@ function ChartSkeleton() {
 function ActivityItem({ movement, index }: { movement: RecentMovement; index: number }) {
   return (
     <div
-      className="flex items-center gap-3 py-3 border-b border-subtle last:border-0 animate-fade-in-up"
+      className="flex items-center gap-3 py-2.5 border-b border-subtle last:border-0 animate-fade-in-up"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${
-          TYPE_BADGE[movement.type]
-        }`}
-      >
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${TYPE_BADGE[movement.type]}`}>
         {TYPE_LABELS[movement.type]}
       </span>
       <span className="text-sm text-ink truncate flex-1">{movement.product.name}</span>
-      <span className="text-xs text-muted shrink-0 hidden sm:block">
-        {movement.user.nombre} {movement.user.apellido[0]}.
-      </span>
+      <span className="text-xs text-muted shrink-0">{movement.quantity} u.</span>
       <span className="text-xs text-muted shrink-0">{timeAgo(movement.date)}</span>
     </div>
   )
 }
 
-function ActivitySkeleton() {
-  return (
-    <div>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-3 py-3 border-b border-subtle last:border-0 animate-pulse"
-          style={{ animationDelay: `${i * 50}ms` }}
-        >
-          <div className="h-5 bg-subtle rounded-full w-16 shrink-0" />
-          <div className="h-3.5 bg-subtle rounded flex-1" />
-          <div className="h-3 bg-subtle rounded w-14 shrink-0" />
-          <div className="h-3 bg-subtle rounded w-16 shrink-0" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function AlertItem({ product, index }: { product: LowStockProduct; index: number }) {
-  const isCritical = product.stock === 0
-  return (
-    <div
-      className="flex items-center gap-3 py-3 border-b border-subtle last:border-0 animate-fade-in-up"
-      style={{ animationDelay: `${index * 50}ms` }}
-    >
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink truncate">{product.name}</p>
-        <p className="text-xs text-muted">{product.code}</p>
-      </div>
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${
-          isCritical
-            ? 'bg-red-50 text-red-600 border-red-100'
-            : 'bg-accent-50 text-accent-600 border-accent-100'
-        }`}
-      >
-        <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            isCritical ? 'bg-red-500' : 'bg-accent-500'
-          }`}
-        />
-        {isCritical ? 'Sin stock' : `${product.stock} / ${product.minStock}`}
-      </span>
-      <Link
-        href="/dashboard/movements?tab=new&type=ENTRADA"
-        className="shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-brand-50 text-brand-500 hover:bg-brand-100 transition-colors"
-      >
-        Entrada
-      </Link>
-    </div>
-  )
-}
-
-function AlertSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-12 bg-subtle rounded-xl animate-pulse"
-          style={{ animationDelay: `${i * 60}ms` }}
-        />
-      ))}
-    </div>
-  )
-}
-
-function QuickActions({ rol }: { rol: UserRole }) {
-  const canWrite = rol === 'Admin' || rol === 'Almacenista'
-  const canDispatch = rol === 'Admin' || rol === 'Despachador'
-
-  const actions: { label: string; href: string; color: string; icon: React.ReactNode }[] = [
-    ...(canWrite
-      ? [
-          {
-            label: 'Registrar entrada',
-            href: '/dashboard/movements?tab=new&type=ENTRADA',
-            color: 'bg-brand-50 text-brand-500 hover:bg-brand-100',
-            icon: (
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M11 4V18M4 11H18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            ),
-          },
-        ]
-      : []),
-    ...(canDispatch
-      ? [
-          {
-            label: 'Nuevo despacho',
-            href: '/dashboard/movements?tab=new&type=VENTA',
-            color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-            icon: (
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path
-                  d="M4 11H18M13 6L18 11L13 16"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            ),
-          },
-        ]
-      : []),
-    {
-      label: 'Ver inventario',
-      href: '/dashboard/inventory',
-      color: 'bg-surface text-ink hover:bg-subtle',
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path
-            d="M3 8L11 4L19 8V14L11 18L3 14V8Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-          <path d="M11 4V18M3 8L11 12L19 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Movimientos',
-      href: '/dashboard/movements?tab=history',
-      color: 'bg-surface text-ink hover:bg-subtle',
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path d="M4 11H18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <path
-            d="M13 6L18 11L13 16"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path d="M9 6L4 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-      ),
-    },
-    ...(rol === 'Admin'
-      ? [
-          {
-            label: 'Usuarios',
-            href: '/dashboard/users',
-            color: 'bg-surface text-ink hover:bg-subtle',
-            icon: (
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.6" />
-                <path
-                  d="M3 19c0-3.314 2.686-6 6-6s6 2.686 6 6"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <path d="M17 3v6M14 6h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            ),
-          },
-        ]
-      : []),
-  ]
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {actions.map(({ label, href, icon, color }, i) => (
-        <Link
-          key={label}
-          href={href}
-          className={`flex flex-col items-center gap-2.5 p-4 rounded-xl transition-colors animate-fade-in-up ${color}`}
-          style={{ animationDelay: `${i * 60}ms` }}
-        >
-          {icon}
-          <span className="text-xs font-semibold text-center leading-tight">{label}</span>
-        </Link>
-      ))}
-    </div>
-  )
+function minStockBadge(stock: number) {
+  if (stock === 0)
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Sin stock</span>
+  if (stock < 10)
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-600 border border-accent-100">Bajo</span>
+  return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Ok</span>
 }
 
 export default function DashboardClient({ user }: { user: DashboardUser }) {
-  const [summary, setSummary] = useState<ProductSummary | null>(null)
-  const [todayDispatches, setTodayDispatches] = useState<number | null>(null)
-  const [chartData, setChartData] = useState<Partial<Record<MovementType, number>> | null>(null)
-  const [recentMovements, setRecentMovements] = useState<RecentMovement[] | null>(null)
-  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[] | null>(null)
+  const { toast } = useToast()
+  const [period, setPeriod] = useState<Period>('today')
+  const [kpis, setKpis] = useState<DashboardKpis | null>(null)
+  const [movements, setMovements] = useState<RecentMovement[] | null>(null)
 
   useEffect(() => {
-    const now = new Date()
-    const todayStart = new Date(now)
-    todayStart.setUTCHours(0, 0, 0, 0)
-    const todayEnd = new Date(now)
-    todayEnd.setUTCHours(23, 59, 59, 999)
-    const sevenDaysAgo = new Date(now)
-    sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7)
-    sevenDaysAgo.setUTCHours(0, 0, 0, 0)
-
-    const start = sevenDaysAgo.toISOString()
-    const end = todayEnd.toISOString()
-    const todayStartStr = todayStart.toISOString()
-
-    Promise.all([
-      fetch('/api/v1/products/summary').then<ProductSummary>((r) => r.json()),
-      fetch(
-        `/api/v1/movements?type=VENTA&startDate=${todayStartStr}&endDate=${end}&limit=1`,
-      ).then<MovementsResponse>((r) => r.json()),
-      fetch(
-        `/api/v1/movements?startDate=${start}&endDate=${end}&limit=500`,
-      ).then<MovementsResponse>((r) => r.json()),
-      fetch('/api/v1/products?limit=200').then<ProductsResponse>((r) => r.json()),
-    ])
-      .then(([sum, dispatches, weekMvts, products]) => {
-        setSummary(sum)
-        setTodayDispatches(dispatches.total ?? 0)
-
-        const counts: Partial<Record<MovementType, number>> = {}
-        for (const m of weekMvts.data ?? []) {
-          counts[m.type] = (counts[m.type] ?? 0) + 1
-        }
-        setChartData(counts)
-
-        const recent = [...(weekMvts.data ?? [])]
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 5)
-        setRecentMovements(recent)
-
-        const prods = products.data ?? []
-        setLowStockProducts(prods.filter((p) => p.stock <= p.minStock))
+    fetch('/api/v1/movements?limit=5')
+      .then<MovementsResponse>((r) => r.json())
+      .then((data) => {
+        const sorted = [...(data.data ?? [])].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        )
+        setMovements(sorted.slice(0, 5))
       })
-      .catch(() => {
-        setSummary({ totalProducts: 0, totalStock: 0, lowStockCount: 0 })
-        setTodayDispatches(0)
-        setChartData({})
-        setRecentMovements([])
-        setLowStockProducts([])
-      })
+      .catch(() => setMovements([]))
   }, [])
 
-  const kpiReady = summary !== null && todayDispatches !== null
+  useEffect(() => {
+    setKpis(null)
+    const { startDate, endDate } = getPeriodDates(period)
+    fetch(
+      `/api/v1/dashboard?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+    )
+      .then((r) => {
+        if (!r.ok) throw new Error()
+        return r.json() as Promise<DashboardKpis>
+      })
+      .then(setKpis)
+      .catch(() => {
+        toast('Error al cargar indicadores', 'error')
+        setKpis(DEFAULT_KPIS)
+      })
+  }, [period, toast])
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up">
-        <h2 className="text-xl font-semibold text-ink">{getGreeting(user.nombre)}</h2>
-        <p className="text-sm text-muted mt-0.5">Aquí está el resumen de operaciones de hoy.</p>
+      <div className="animate-fade-in-up flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-ink">{getGreeting(user.nombre)}</h2>
+          <p className="text-sm text-muted mt-0.5">Aquí tienes el resumen operativo de hoy</p>
+        </div>
+        <PeriodSelector active={period} onChange={setPeriod} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {!kpiReady ? (
+        {kpis === null ? (
           <>
             <KpiSkeleton delay={0} />
             <KpiSkeleton delay={80} />
@@ -545,130 +411,88 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
           </>
         ) : (
           <>
-            <KpiCard
-              icon={<IconBox />}
-              label="Total productos"
-              value={summary.totalProducts.toLocaleString('es-CO')}
+            <KpiCard icon={<IconBoxOut />} label="Unidades despachadas" value={kpis.dispatchedUnits.toLocaleString('es-CO')} delay={0} />
+            <KpiCard icon={<IconDocument />} label="Despachos realizados" value={kpis.dispatchCount.toLocaleString('es-CO')} delay={80} />
+            <KpiCard icon={<IconBoxIn />} label="Entradas registradas" value={kpis.entryCount.toLocaleString('es-CO')} delay={160} />
+            <KpiCard icon={<IconGauge />} label="Productos con stock" value={`${kpis.stockPercentage.toFixed(1)}%`} delay={240}>
+              <ArcProgress value={kpis.stockPercentage} />
+            </KpiCard>
+          </>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {kpis === null ? (
+          <>
+            <DataSkeleton delay={0} />
+            <DataSkeleton delay={80} />
+            <DataSkeleton delay={160} />
+            <DataSkeleton delay={240} />
+          </>
+        ) : (
+          <>
+            <DataCard
+              icon={<IconStar />}
+              label="Top cliente"
+              title={kpis.topClient?.clientName ?? 'Sin datos para el periodo'}
+              subtitle={kpis.topClient ? `${kpis.topClient.totalPurchases.toLocaleString('es-CO')} unidades compradas` : undefined}
               delay={0}
             />
-            <KpiCard
-              icon={<IconWarehouse />}
-              label="Stock total"
-              value={summary.totalStock.toLocaleString('es-CO')}
+            <DataCard
+              icon={<IconRotate />}
+              label="Rotación destacada"
+              title={kpis.topRotationProduct?.productName ?? 'Sin datos'}
+              subtitle={kpis.topRotationProduct ? `${kpis.topRotationProduct.totalDispatched.toLocaleString('es-CO')} unidades despachadas` : undefined}
               delay={80}
             />
-            <KpiCard
-              icon={<IconAlert />}
-              label="Stock bajo"
-              value={summary.lowStockCount}
-              accent={summary.lowStockCount > 0}
+            <DataCard
+              icon={<IconTrendUp />}
+              iconBg="bg-emerald-50 text-emerald-600"
+              label="Mayor stock"
+              title={kpis.maxStockProduct?.productName ?? 'Sin datos'}
+              subtitle={kpis.maxStockProduct ? `${kpis.maxStockProduct.stock.toLocaleString('es-CO')} unidades` : undefined}
+              badge={kpis.maxStockProduct
+                ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Alto</span>
+                : undefined}
               delay={160}
             />
-            <KpiCard
-              icon={<IconTruck />}
-              label="Despachos hoy"
-              value={todayDispatches}
+            <DataCard
+              icon={<IconTrendDown />}
+              iconBg={kpis.minStockProduct
+                ? kpis.minStockProduct.stock === 0
+                  ? 'bg-red-50 text-red-500'
+                  : kpis.minStockProduct.stock < 10
+                    ? 'bg-accent-50 text-accent-500'
+                    : 'bg-emerald-50 text-emerald-600'
+                : 'bg-brand-50 text-brand-500'}
+              label="Menor stock"
+              title={kpis.minStockProduct?.productName ?? 'Sin datos'}
+              subtitle={kpis.minStockProduct ? `${kpis.minStockProduct.stock.toLocaleString('es-CO')} unidades` : undefined}
+              badge={kpis.minStockProduct ? minStockBadge(kpis.minStockProduct.stock) : undefined}
               delay={240}
             />
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div
-            className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6"
-            style={{ animationDelay: '300ms' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-5">
-              Movimientos por tipo · última semana
-            </p>
-            {chartData === null ? <ChartSkeleton /> : <BarChart typeCounts={chartData} />}
-          </div>
-
-          <div
-            className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6"
-            style={{ animationDelay: '380ms' }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                Actividad reciente
-              </p>
-              <Link
-                href="/dashboard/movements"
-                className="text-xs text-brand-500 hover:text-brand-600 font-medium transition-colors"
-              >
-                Ver todos →
-              </Link>
-            </div>
-            {recentMovements === null ? (
-              <ActivitySkeleton />
-            ) : recentMovements.length === 0 ? (
-              <p className="text-sm text-muted text-center py-8">Sin movimientos recientes</p>
-            ) : (
-              <div>
-                {recentMovements.map((m, i) => (
-                  <ActivityItem key={m.id} movement={m} index={i} />
-                ))}
-              </div>
-            )}
-          </div>
+      <div className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5" style={{ animationDelay: '300ms' }}>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">Actividad reciente</p>
+          <Link href="/dashboard/movements" className="text-xs text-brand-500 hover:text-brand-600 font-medium transition-colors">
+            Ver todo →
+          </Link>
         </div>
-
-        <div className="space-y-6">
-          <div
-            className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6"
-            style={{ animationDelay: '340ms' }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                Alertas de stock
-              </p>
-              {lowStockProducts !== null && lowStockProducts.length > 0 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-100">
-                  {lowStockProducts.length}
-                </span>
-              )}
-            </div>
-            {lowStockProducts === null ? (
-              <AlertSkeleton />
-            ) : lowStockProducts.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-center">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-3 text-emerald-500">
-                  <IconCheck />
-                </div>
-                <p className="text-sm font-semibold text-ink">Stock en orden</p>
-                <p className="text-xs text-muted mt-0.5">
-                  Todos los productos tienen stock suficiente
-                </p>
-              </div>
-            ) : (
-              <div>
-                {lowStockProducts.slice(0, 5).map((p, i) => (
-                  <AlertItem key={p.id} product={p} index={i} />
-                ))}
-                {lowStockProducts.length > 5 && (
-                  <Link
-                    href="/dashboard/inventory"
-                    className="block text-center text-xs text-brand-500 hover:text-brand-600 font-medium mt-3 transition-colors"
-                  >
-                    +{lowStockProducts.length - 5} más · Ver inventario
-                  </Link>
-                )}
-              </div>
-            )}
+        {movements === null ? (
+          <ActivitySkeleton />
+        ) : movements.length === 0 ? (
+          <p className="text-sm text-muted text-center py-8">Sin movimientos recientes</p>
+        ) : (
+          <div>
+            {movements.map((m, i) => (
+              <ActivityItem key={m.id} movement={m} index={i} />
+            ))}
           </div>
-
-          <div
-            className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6"
-            style={{ animationDelay: '420ms' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-4">
-              Accesos rápidos
-            </p>
-            <QuickActions rol={user.rol} />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -69,11 +69,21 @@ function IconUsers() {
   );
 }
 
+function IconAlerts() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <path d="M8 2C5.239 2 3 4.239 3 7V11L1.5 12.5H14.5L13 11V7C13 4.239 10.761 2 8 2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M6.5 13C6.5 13.828 7.172 14.5 8 14.5C8.828 14.5 9.5 13.828 9.5 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const baseNavGroups: NavGroup[] = [
   {
     label: 'Principal',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: IconDashboard },
+      { label: 'Alertas', href: '/dashboard/alerts', icon: IconAlerts },
     ],
   },
   {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -17,6 +17,14 @@ export default function MobileDrawer({ nombre, apellido, rol }: MobileDrawerProp
   const pathname = usePathname();
   const badge = rolBadge[rol] ?? rolBadge.Visualizador;
   const groups = getNavGroups(rol);
+  const [criticalCount, setCriticalCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/v1/alerts')
+      .then<{ totalCritical: number }>((r) => r.json())
+      .then((data) => setCriticalCount(data.totalCritical ?? 0))
+      .catch(() => {});
+  }, [pathname]);
 
   return (
     <>
@@ -107,7 +115,12 @@ export default function MobileDrawer({ nombre, apellido, rol }: MobileDrawerProp
                           <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-brand-500" />
                         )}
                         <Icon />
-                        {item.label}
+                        <span className="flex-1">{item.label}</span>
+                        {item.href === '/dashboard/alerts' && criticalCount > 0 && (
+                          <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                            {criticalCount > 99 ? '99+' : criticalCount}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );

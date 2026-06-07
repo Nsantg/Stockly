@@ -2,8 +2,9 @@
 
 **Plan:** PT-DCP-01 v1.0  
 **Fecha del reporte:** 7 de junio de 2026  
-**Estado de la suite técnica:** 59 pruebas pasaron, ninguna omitida ni fallida (`npm test`)  
-**Estado de la suite BDD:** 5 escenarios pasaron (`npm run test:bdd`)
+**Estado de la suite técnica:** 59 pruebas pasaron (`npm test`)  
+**Estado de la suite BDD:** 5 escenarios pasaron (`npm run test:bdd`)  
+**Estado de la suite integración:** 7 pruebas pasaron (`npm run test:integration`)
 
 ---
 
@@ -64,36 +65,26 @@ Esta tabla relaciona cada archivo de prueba automatizada con los requisitos func
 
 ---
 
-### 1.3 Casos del plan aún sin automatización completa
+### 1.3 Casos del plan — estado de automatización
 
-| CP | Descripción | RF | Estado |
-|----|-------------|-----|--------|
-| CP-01 | Registro de producto válido | RF-01 | Parcial (integración + createProduct) |
-| CP-02 | Código duplicado | RF-01 | Pendiente |
-| CP-03 | Serial en Electroterapia | RF-01 | Pendiente |
-| CP-04 | Consulta, filtrado y búsqueda | RF-02 a RF-04 | Parcial (GET inventario + listInventory) |
-| CP-05 | Anulación exitosa | RNF-06 | Manual |
-| CP-06 | Doble anulación (idempotencia) | RNF-06 | Pendiente |
-| CP-07 | Entrada incrementa stock | RF-05 | Automatizado (EntradaHandler) |
-| CP-08 | Anulación de entrada | RF-05, RF-17 | Manual |
-| CP-09 | Observación por producto dañado | RF-06 | Pendiente |
-| CP-12 | Salida por daño y vencimiento | RF-07 | Automatizado (DanoHandler, VencimientoHandler) |
-| CP-13 | Edición de despacho por turno | RF-10 | Pendiente |
-| CP-14 | Traslado bodega a vitrina | RF-11 | Automatizado (TrasladoHandler) |
-| CP-17 | Ajuste de ingreso | RF-13, RF-14 | Automatizado (AjusteIngresoHandler) |
-| CP-20 | Visualizador no puede editar | RF-16 | Parcial (401/403 en users; falta rol Visualizador) |
-| CP-21 | Registro automático en auditoría | RF-17 | Pendiente |
-| CP-22 | Consulta de auditoría por filtros | RF-18 | Pendiente |
-| CP-23 | Soft Delete (ADR-006) | RNF-06 | Manual, con cobertura parcial en auth |
-| CP-24 | Registro de cliente | RF-19 | Pendiente |
-| CP-25 | Cliente obligatorio en venta | RF-20 | Automatizado (VentaHandler) |
-| CP-26 | Dashboard con KPIs | RF-21 | Pendiente |
-| CP-28 | Advertencia de refrigeración | RF-23 | Pendiente |
-| CP-29 | Flujo Entrada, Venta, Auditoría | RF-05, RF-07, RF-17 | Pendiente |
-| CP-30 | Flujo Venta, Devolución, Stock | RF-12 | Pendiente |
-| CP-31 | Usabilidad, seguridad y trazabilidad | RNF-01, RNF-03, RNF-06 | Parcial (auth + permisos) |
+| CP | Descripción | RF | Unitarias | BDD | Integración API |
+|----|-------------|-----|-----------|-----|-----------------|
+| CP-01 | Registro producto válido | RF-01 | Parcial | No | No |
+| CP-02 | Código duplicado | RF-01 | Pendiente | No | No |
+| CP-05 | Anulación exitosa | RNF-06 | Manual | Sí | Sí |
+| CP-06 | Doble anulación | RNF-06 | Pendiente | No | No |
+| CP-07 | Entrada incrementa stock | RF-05 | Sí | No | No |
+| CP-10 | Venta con cliente | RF-07 | Sí | Sí | Sí |
+| CP-11 | Stock insuficiente | RF-09 | Sí | Sí | Sí |
+| CP-20 | Control de roles | RF-16 | Parcial | No | Parcial |
+| CP-21 | Registro en auditoría | RF-17 | Pendiente | No | Sí |
+| CP-23 | Soft delete | RNF-06 | Parcial | Sí | Sí |
+| CP-29 | Flujo E2E | RF-05,07,17 | Pendiente | No | No |
 
-### 1.4 Cobertura complementaria BDD (`npm run test:bdd`)
+Casos restantes del plan: ver matriz completa en secciones 1.1–1.2 o en el PDF PT-DCP-01. Muchos CPs menores siguen solo en manual o unitarias.
+
+---
+### 1.4 Cobertura BDD (`npm run test:bdd`)
 
 Escenarios Gherkin en `__bdd__/features/`. Detalle en `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md`.
 
@@ -104,6 +95,18 @@ Escenarios Gherkin en `__bdd__/features/`. Detalle en `__bdd__/TRAZABILIDAD-Y-RE
 | CP-15 | devoluciones.feature | Devolución aceptada para Electroterapia |
 | CP-16 | devoluciones.feature | Devolución rechazada para producto no eléctrico |
 | CP-05, CP-08, CP-23 | trazabilidad.feature | Anulación de movimiento con soft delete |
+
+### 1.5 Cobertura integración API (`npm run test:integration`)
+
+Pruebas con Supertest y PostgreSQL real en `stockly_test`. Detalle en `__tests__/integration/TRAZABILIDAD-Y-REPORTES-INTEGRACION.md`.
+
+| CP | Escenario integración | Endpoint |
+|----|----------------------|----------|
+| CP-10 | Venta descuenta stock | POST `/api/v1/movements` |
+| CP-11 | Stock insuficiente, BD intacta | POST `/api/v1/movements` |
+| CP-21 | Movement persistido | POST `/api/v1/movements` |
+| CP-05, CP-23 | Anulación soft delete + stock | PATCH `.../annul` |
+| CP-20 | 401 sin sesión; 403 rol incorrecto | POST / PATCH movimientos |
 
 ---
 
@@ -128,9 +131,10 @@ No hay pruebas omitidas. Los dos tests de autorización en `users.integration.te
 | Brecha | Por qué importa | CP / RN afectados |
 |--------|-----------------|-------------------|
 | FEFO no conectado a VentaHandler | El servicio elige el lote correcto, pero la venta descuenta stock global del producto | N2026-4 |
-| Sin pruebas de anulación e idempotencia | La trazabilidad (RNF-06) no se verifica de forma automática | CP-05, CP-06, CP-23 |
+| Sin prueba de doble anulación (CP-06) | Segundo PATCH annul no verificado | CP-06 |
 | CP-20 incompleto para Visualizador | Solo probamos 401/403 en creación de usuarios, no el rol Visualizador en otros módulos | CP-20 |
-| Sin flujos E2E con Supertest | Entrada-Venta-Auditoría y Venta-Devolución no están automatizados | CP-29, CP-30 |
+| Sin flujos E2E multi-módulo | CP-29 y CP-30 requieren encadenar varios endpoints | CP-29, CP-30 |
+| CP-06 idempotencia | Segundo PATCH annul no probado en integración | CP-06 |
 
 ---
 
@@ -176,8 +180,8 @@ Evidencia:    Archivo de test, log, captura o commit
 
 | Fecha | Comando | Resultado | Notas |
 |-------|---------|-----------|-------|
-| 2026-06-07 | npm run test:bdd | 5 pasaron | Suite BDD inicial; documentación en __bdd__/ |
-| 2026-06-07 | npm test | 59 pasaron, 0 omitidas, 0 fallaron | Tests de auth reactivados; handlers e InventoryService al 100% |
+| 2026-06-07 | npm run test:integration | 7 pasaron | Supertest + PostgreSQL stockly_test |
+| 2026-06-07 | npm run test:bdd | 5 pasaron | Suite BDD; documentación en __bdd__/ |
 | 2026-06-07 | npm test -- __tests__/services | 57 pasaron | Solo pruebas unitarias de servicios |
 | 2026-06-07 | npm test (corrido anterior) | 40 pasaron, 2 omitidas | Documentación inicial |
 
@@ -187,7 +191,9 @@ Evidencia:    Archivo de test, log, captura o commit
 
 - Estructura y comandos (técnica): `DOCUMENTACION-PRUEBAS.md`
 - Estructura y comandos (BDD): `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md`
-- Matriz escenarios Gherkin: `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md`
+- Estructura y comandos (integración): `__tests__/integration/DOCUMENTACION-PRUEBAS-INTEGRACION.md`
+- Matriz integración: `__tests__/integration/TRAZABILIDAD-Y-REPORTES-INTEGRACION.md`
+- Matriz BDD: `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md`
 - Plan de casos manuales: `PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf`
 - Permisos y roles: `src/lib/permissions.ts`
 - Handlers de movimientos: `src/service/movement/handlers/`

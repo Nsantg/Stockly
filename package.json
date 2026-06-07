@@ -13,6 +13,7 @@
     "migration:create": "cross-env TYPEORM_CLI=true ts-node -P tsconfig.typeorm.json -r dotenv/config ./node_modules/typeorm/cli.js migration:create",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:integration": "jest --config jest.integration.config.js",
     "test:bdd": "jest --config jest.bdd.config.js"
   },
   "dependencies": {

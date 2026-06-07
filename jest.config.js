@@ -7,4 +7,5 @@ module.exports = {
       '^@/(.*)$': '<rootDir>/src/$1',
     },
     testMatch: ['**/__tests__/**/*.test.ts', '**/?(*.)+(spec|test).ts'],
+    testPathIgnorePatterns: ['/node_modules/', '__tests__/integration/'],
   };

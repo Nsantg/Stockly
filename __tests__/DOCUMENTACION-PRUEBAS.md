@@ -3,20 +3,24 @@
 **Proyecto:** Nuclear 2026 (N2026), gestor de inventario Stockly  
 **Asignatura:** Pruebas de Software | Arquitectura de Software | Programación con tecnologías web  
 **Plan de referencia:** `PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf`  
-**Última ejecución registrada:** 7 de junio de 2026 — suite técnica: 59 pruebas pasaron; suite BDD: 5 escenarios pasaron
+**Última ejecución registrada:** 7 de junio de 2026 — unitarias: 59 pasaron; BDD: 5 escenarios; integración: 7 pruebas (PostgreSQL)
 
 ---
 
-## Dos suites de prueba en el proyecto
+## Tres suites de prueba en el proyecto
 
-Stockly tiene **dos carpetas independientes** de pruebas automatizadas:
+Stockly tiene **tres carpetas/configuraciones** de pruebas automatizadas:
 
-| Suite | Carpeta | Comando | Enfoque |
-|-------|---------|---------|---------|
-| **Técnica** | `__tests__/` | `npm test` | Unitarias e integración con Jest (`describe` / `it`) |
-| **BDD** | `__bdd__/` | `npm run test:bdd` | Escenarios Gherkin en español con jest-cucumber |
+| Suite | Carpeta / config | Comando | Enfoque | BD real |
+|-------|------------------|---------|---------|---------|
+| **Técnica (unitarias)** | `__tests__/` · `jest.config.js` | `npm test` | Jest, mocks, handlers y servicios | No |
+| **BDD** | `__bdd__/` · `jest.bdd.config.js` | `npm run test:bdd` | Gherkin en español (jest-cucumber) | No |
+| **Integración API** | `__tests__/integration/` · `jest.integration.config.js` | `npm run test:integration` | Supertest + PostgreSQL `stockly_test` | Sí |
 
-La configuración BDD usa `jest.bdd.config.js` y **no modifica** `jest.config.js`. Documentación BDD: `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md`.
+La integración está **excluida** de `npm test` (`testPathIgnorePatterns`) para no exigir PostgreSQL al correr unitarias. Documentación:
+
+- BDD: `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md`
+- Integración: `__tests__/integration/DOCUMENTACION-PRUEBAS-INTEGRACION.md`
 
 ---
 
@@ -74,11 +78,18 @@ __tests__/
 │   ├── UserService.test.ts
 │   └── MovementService.test.ts
 │
-├── lib/                              integración ligera de lib y controladores
+├── lib/                              integración ligera de lib y controladores (mocks)
 │   ├── auth.test.ts
 │   └── inventory.integration.test.ts
 │
-└── api/                              integración de controladores REST
+├── integration/                      integración API + PostgreSQL (Supertest)
+│   ├── DOCUMENTACION-PRUEBAS-INTEGRACION.md
+│   ├── TRAZABILIDAD-Y-REPORTES-INTEGRACION.md
+│   ├── movements.integration.test.ts
+│   ├── helpers/                      testDatabase, testServer, sessionMock
+│   └── setup/                        globalSetup, loadEnv, etc.
+│
+└── api/                              integración de controladores REST (mocks)
     └── users.integration.test.ts
 ```
 
@@ -95,9 +106,10 @@ __tests__/
 
 | Tipo | Dónde | Qué prueba | ¿Usa BD real? |
 |------|-------|------------|---------------|
-| Unitaria | `services/` | Handlers, servicios, factory, validación Zod | No |
-| Integración de controlador | `lib/`, `api/` | Respuestas HTTP con servicios mockeados | No |
-| Manual | Plan PT-DCP-01 (PDF) | UI, flujos completos, revisión en pgAdmin | Sí, en QA/Staging |
+| Unitaria | `services/`, `api/`, `lib/` | Handlers, servicios, controladores mockeados | No |
+| Integración API | `integration/` | Supertest + Next handlers + PostgreSQL | Sí (`stockly_test`) |
+| BDD | `__bdd__/` | Escenarios Gherkin, handlers sin BD | No |
+| Manual | Plan PT-DCP-01 (PDF) | UI, flujos completos en QA/Staging | Sí |
 
 ---
 
@@ -165,10 +177,22 @@ Un archivo concreto:
 npm test -- __tests__/services/movement/VentaHandler.test.ts
 ```
 
-Con reporte de cobertura:
+Con reporte de cobertura (solo suite técnica):
 
 ```bash
 npm run test:coverage
+```
+
+Integración con PostgreSQL (requiere `.env` y Postgres activo):
+
+```bash
+npm run test:integration
+```
+
+BDD:
+
+```bash
+npm run test:bdd
 ```
 
 El reporte HTML queda en `coverage/lcov-report/index.html`.
@@ -215,8 +239,11 @@ describe('MiHandler - CP-XX', () => {
 | Matriz de trazabilidad, fallos y defectos (técnica) | `__tests__/TRAZABILIDAD-Y-REPORTES-QA.md` |
 | Documentación suite BDD | `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md` |
 | Matriz BDD (escenarios vs CP) | `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md` |
+| Documentación integración API | `__tests__/integration/DOCUMENTACION-PRUEBAS-INTEGRACION.md` |
+| Matriz integración (API vs CP) | `__tests__/integration/TRAZABILIDAD-Y-REPORTES-INTEGRACION.md` |
 | Configuración Jest (técnica) | `jest.config.js` |
 | Configuración Jest (BDD) | `jest.bdd.config.js` |
+| Configuración Jest (integración) | `jest.integration.config.js` |
 | Código bajo prueba | `src/service/`, `src/controller/`, `src/lib/` |
 
 ---

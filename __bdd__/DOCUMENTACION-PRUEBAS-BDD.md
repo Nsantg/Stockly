@@ -168,17 +168,18 @@ Los step definitions en `venta.steps.ts` traducen cada paso a llamadas a `VentaH
 
 ---
 
-## Relación con la suite técnica
+## Relación con las otras suites
 
-| Aspecto | BDD (`__bdd__/`) | Técnica (`__tests__/`) |
-|---------|------------------|------------------------|
-| Lenguaje | Gherkin en español | `describe` / `it` en TypeScript |
-| Audiencia | Negocio, QA, docente | Desarrolladores |
-| Cobertura | 5 escenarios de flujo | 59 casos unitarios e integración |
-| Config Jest | `jest.bdd.config.js` | `jest.config.js` |
-| BD real | No | No |
+| Aspecto | BDD (`__bdd__/`) | Técnica (`__tests__/`) | Integración API |
+|---------|------------------|------------------------|-----------------|
+| Lenguaje | Gherkin en español | `describe` / `it` | `describe` / `it` + AAA |
+| Audiencia | Negocio, QA, docente | Desarrolladores | QA / backend |
+| Cobertura | 5 escenarios | 59 casos | 7 pruebas HTTP + BD |
+| Comando | `npm run test:bdd` | `npm test` | `npm run test:integration` |
+| BD real | No | No | Sí (`stockly_test`) |
+| HTTP Supertest | No | Parcial (mocks) | Sí |
 
-Ambas suites prueban la misma lógica de dominio; BDD prioriza legibilidad y trazabilidad con el plan PT-DCP-01.
+Las tres suites se complementan. La integración valida lo que BDD y unitarias no pueden: persistencia real en PostgreSQL y rutas API completas. Ver `__tests__/integration/DOCUMENTACION-PRUEBAS-INTEGRACION.md`.
 
 ---
 
@@ -200,6 +201,7 @@ Ambas suites prueban la misma lógica de dominio; BDD prioriza legibilidad y tra
 | Plan de pruebas oficial | `__tests__/PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf` |
 | Matriz BDD (escenarios vs CP) | `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md` |
 | Documentación suite técnica | `__tests__/DOCUMENTACION-PRUEBAS.md` |
+| Documentación integración API | `__tests__/integration/DOCUMENTACION-PRUEBAS-INTEGRACION.md` |
 | Matriz técnica y defectos | `__tests__/TRAZABILIDAD-Y-REPORTES-QA.md` |
 | Config BDD | `jest.bdd.config.js` |
 

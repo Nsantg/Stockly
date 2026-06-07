@@ -1,11 +1,57 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
 
 export type UserRole = 'Admin' | 'Almacenista' | 'Despachador' | 'Visualizador'
 
 type Period = 'today' | 'week' | 'month' | 'year'
+
+type MovementType =
+  | 'ENTRADA'
+  | 'VENTA'
+  | 'DAÑO'
+  | 'VENCIMIENTO'
+  | 'DEVOLUCION'
+  | 'AJUSTE_INGRESO'
+  | 'AJUSTE_SALIDA'
+  | 'TRASLADO'
+
+interface RecentMovement {
+  id: string
+  type: MovementType
+  product: { name: string }
+  quantity: number
+  date: string
+}
+
+interface MovementsResponse {
+  data: RecentMovement[]
+  total: number
+}
+
+const TYPE_LABELS: Record<MovementType, string> = {
+  ENTRADA: 'Entrada',
+  VENTA: 'Venta',
+  DAÑO: 'Daño',
+  VENCIMIENTO: 'Vencimiento',
+  DEVOLUCION: 'Devolución',
+  AJUSTE_INGRESO: 'Aj. Ingreso',
+  AJUSTE_SALIDA: 'Aj. Salida',
+  TRASLADO: 'Traslado',
+}
+
+const TYPE_BADGE: Record<MovementType, string> = {
+  ENTRADA: 'bg-brand-50 text-brand-500 border-brand-100',
+  VENTA: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  DAÑO: 'bg-red-50 text-red-600 border-red-100',
+  VENCIMIENTO: 'bg-orange-50 text-orange-600 border-orange-100',
+  DEVOLUCION: 'bg-purple-50 text-purple-600 border-purple-100',
+  AJUSTE_INGRESO: 'bg-teal-50 text-teal-600 border-teal-100',
+  AJUSTE_SALIDA: 'bg-amber-50 text-amber-700 border-amber-100',
+  TRASLADO: 'bg-slate-50 text-slate-600 border-slate-100',
+}
 
 interface DashboardUser {
   nombre: string
@@ -57,6 +103,17 @@ function getPeriodDates(period: Period): { startDate: string; endDate: string } 
     start.setUTCMonth(0, 1)
   }
   return { startDate: start.toISOString(), endDate: end.toISOString() }
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'hace un momento'
+  if (mins < 60) return `hace ${mins} min`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `hace ${hrs}h`
+  const days = Math.floor(hrs / 24)
+  return `hace ${days} día${days > 1 ? 's' : ''}`
 }
 
 function getGreeting(nombre: string): string {
@@ -260,6 +317,37 @@ function PeriodSelector({ active, onChange }: { active: Period; onChange: (p: Pe
   )
 }
 
+function ActivitySkeleton() {
+  return (
+    <div>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 py-2.5 border-b border-subtle last:border-0" style={{ animationDelay: `${i * 50}ms` }}>
+          <div className="h-5 bg-subtle rounded-full w-16 animate-pulse shrink-0" />
+          <div className="h-3 bg-subtle rounded animate-pulse flex-1" />
+          <div className="h-3 bg-subtle rounded animate-pulse w-10 shrink-0" />
+          <div className="h-3 bg-subtle rounded animate-pulse w-16 shrink-0" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ActivityItem({ movement, index }: { movement: RecentMovement; index: number }) {
+  return (
+    <div
+      className="flex items-center gap-3 py-2.5 border-b border-subtle last:border-0 animate-fade-in-up"
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${TYPE_BADGE[movement.type]}`}>
+        {TYPE_LABELS[movement.type]}
+      </span>
+      <span className="text-sm text-ink truncate flex-1">{movement.product.name}</span>
+      <span className="text-xs text-muted shrink-0">{movement.quantity} u.</span>
+      <span className="text-xs text-muted shrink-0">{timeAgo(movement.date)}</span>
+    </div>
+  )
+}
+
 function minStockBadge(stock: number) {
   if (stock === 0)
     return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Sin stock</span>
@@ -272,6 +360,19 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
   const { toast } = useToast()
   const [period, setPeriod] = useState<Period>('today')
   const [kpis, setKpis] = useState<DashboardKpis | null>(null)
+  const [movements, setMovements] = useState<RecentMovement[] | null>(null)
+
+  useEffect(() => {
+    fetch('/api/v1/movements?limit=5')
+      .then<MovementsResponse>((r) => r.json())
+      .then((data) => {
+        const sorted = [...(data.data ?? [])].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        )
+        setMovements(sorted.slice(0, 5))
+      })
+      .catch(() => setMovements([]))
+  }, [])
 
   useEffect(() => {
     setKpis(null)
@@ -371,6 +472,26 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
               delay={240}
             />
           </>
+        )}
+      </div>
+
+      <div className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5" style={{ animationDelay: '300ms' }}>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">Actividad reciente</p>
+          <Link href="/dashboard/movements" className="text-xs text-brand-500 hover:text-brand-600 font-medium transition-colors">
+            Ver todo →
+          </Link>
+        </div>
+        {movements === null ? (
+          <ActivitySkeleton />
+        ) : movements.length === 0 ? (
+          <p className="text-sm text-muted text-center py-8">Sin movimientos recientes</p>
+        ) : (
+          <div>
+            {movements.map((m, i) => (
+              <ActivityItem key={m.id} movement={m} index={i} />
+            ))}
+          </div>
         )}
       </div>
     </div>

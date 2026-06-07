@@ -3,7 +3,20 @@
 **Proyecto:** Nuclear 2026 (N2026), gestor de inventario Stockly  
 **Asignatura:** Pruebas de Software | Arquitectura de Software | Programación con tecnologías web  
 **Plan de referencia:** `PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf`  
-**Última ejecución registrada:** 7 de junio de 2026 — 59 pruebas pasaron, ninguna omitida ni fallida
+**Última ejecución registrada:** 7 de junio de 2026 — suite técnica: 59 pruebas pasaron; suite BDD: 5 escenarios pasaron
+
+---
+
+## Dos suites de prueba en el proyecto
+
+Stockly tiene **dos carpetas independientes** de pruebas automatizadas:
+
+| Suite | Carpeta | Comando | Enfoque |
+|-------|---------|---------|---------|
+| **Técnica** | `__tests__/` | `npm test` | Unitarias e integración con Jest (`describe` / `it`) |
+| **BDD** | `__bdd__/` | `npm run test:bdd` | Escenarios Gherkin en español con jest-cucumber |
+
+La configuración BDD usa `jest.bdd.config.js` y **no modifica** `jest.config.js`. Documentación BDD: `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md`.
 
 ---
 
@@ -199,8 +212,11 @@ describe('MiHandler - CP-XX', () => {
 | Documento | Ubicación |
 |-----------|-----------|
 | Plan de pruebas oficial | `__tests__/PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf` |
-| Matriz de trazabilidad, fallos y defectos | `__tests__/TRAZABILIDAD-Y-REPORTES-QA.md` |
-| Configuración de Jest | `jest.config.js` |
+| Matriz de trazabilidad, fallos y defectos (técnica) | `__tests__/TRAZABILIDAD-Y-REPORTES-QA.md` |
+| Documentación suite BDD | `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md` |
+| Matriz BDD (escenarios vs CP) | `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md` |
+| Configuración Jest (técnica) | `jest.config.js` |
+| Configuración Jest (BDD) | `jest.bdd.config.js` |
 | Código bajo prueba | `src/service/`, `src/controller/`, `src/lib/` |
 
 ---

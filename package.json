@@ -12,7 +12,8 @@
     "migration:revert": "cross-env TYPEORM_CLI=true ts-node -P tsconfig.typeorm.json -r dotenv/config ./node_modules/typeorm/cli.js migration:revert -d src/lib/database.ts",
     "migration:create": "cross-env TYPEORM_CLI=true ts-node -P tsconfig.typeorm.json -r dotenv/config ./node_modules/typeorm/cli.js migration:create",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:bdd": "jest --config jest.bdd.config.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -22,23 +23,24 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.20",
     "swagger-jsdoc": "^6.2.8",
+    "typeorm": "^0.3.20",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/swagger-jsdoc": "^6.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.14.10",
     "@types/pg": "^8.11.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/supertest": "^7.2.0",
+    "@types/swagger-jsdoc": "^6.0.4",
     "autoprefixer": "^10.4.19",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
     "jest": "^30.4.2",
+    "jest-cucumber": "^4.5.0",
     "postcss": "^8.4.39",
     "supertest": "^7.2.2",
     "tailwindcss": "^3.4.6",

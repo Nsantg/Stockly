@@ -2,7 +2,8 @@
 
 **Plan:** PT-DCP-01 v1.0  
 **Fecha del reporte:** 7 de junio de 2026  
-**Estado de la suite:** 59 pruebas pasaron, ninguna omitida ni fallida
+**Estado de la suite técnica:** 59 pruebas pasaron, ninguna omitida ni fallida (`npm test`)  
+**Estado de la suite BDD:** 5 escenarios pasaron (`npm run test:bdd`)
 
 ---
 
@@ -92,6 +93,18 @@ Esta tabla relaciona cada archivo de prueba automatizada con los requisitos func
 | CP-30 | Flujo Venta, Devolución, Stock | RF-12 | Pendiente |
 | CP-31 | Usabilidad, seguridad y trazabilidad | RNF-01, RNF-03, RNF-06 | Parcial (auth + permisos) |
 
+### 1.4 Cobertura complementaria BDD (`npm run test:bdd`)
+
+Escenarios Gherkin en `__bdd__/features/`. Detalle en `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md`.
+
+| CP | Feature | Escenario |
+|----|---------|-----------|
+| CP-10 | venta.feature | Despacho exitoso que descuenta stock |
+| CP-11 | venta.feature | Despacho rechazado por stock insuficiente |
+| CP-15 | devoluciones.feature | Devolución aceptada para Electroterapia |
+| CP-16 | devoluciones.feature | Devolución rechazada para producto no eléctrico |
+| CP-05, CP-08, CP-23 | trazabilidad.feature | Anulación de movimiento con soft delete |
+
 ---
 
 ## 2. Informe de casos fallidos y omitidos
@@ -163,6 +176,7 @@ Evidencia:    Archivo de test, log, captura o commit
 
 | Fecha | Comando | Resultado | Notas |
 |-------|---------|-----------|-------|
+| 2026-06-07 | npm run test:bdd | 5 pasaron | Suite BDD inicial; documentación en __bdd__/ |
 | 2026-06-07 | npm test | 59 pasaron, 0 omitidas, 0 fallaron | Tests de auth reactivados; handlers e InventoryService al 100% |
 | 2026-06-07 | npm test -- __tests__/services | 57 pasaron | Solo pruebas unitarias de servicios |
 | 2026-06-07 | npm test (corrido anterior) | 40 pasaron, 2 omitidas | Documentación inicial |
@@ -171,7 +185,9 @@ Evidencia:    Archivo de test, log, captura o commit
 
 ## 5. Referencias
 
-- Estructura y comandos: `DOCUMENTACION-PRUEBAS.md`
+- Estructura y comandos (técnica): `DOCUMENTACION-PRUEBAS.md`
+- Estructura y comandos (BDD): `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md`
+- Matriz escenarios Gherkin: `__bdd__/TRAZABILIDAD-Y-REPORTES-BDD.md`
 - Plan de casos manuales: `PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf`
 - Permisos y roles: `src/lib/permissions.ts`
 - Handlers de movimientos: `src/service/movement/handlers/`

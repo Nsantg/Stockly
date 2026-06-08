@@ -11,4 +11,5 @@ echo "Ejecutando migraciones pendientes..."
 npm run migration:run
 
 echo "Iniciando aplicacion en modo produccion..."
+export NODE_ENV=production
 exec npm run start

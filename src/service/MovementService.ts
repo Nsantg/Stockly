@@ -11,6 +11,7 @@ import {
 } from '../repository/MovementRepository';
 import { productRepository } from '../repository/ProductRepository';
 import { MovementFactory } from './movement/MovementFactory';
+import { uploadImage } from '../lib/cloudinary';
 
 const createMovementSchema = z.object({
   type: z.nativeEnum(MovementType),
@@ -43,6 +44,16 @@ export type AnnulMovementDto = z.infer<typeof annulMovementSchema>;
 export type EditDispatchDto = z.infer<typeof editDispatchSchema>;
 
 type Shift = 'MAÑANA' | 'TARDE' | null;
+
+const SALIDA_TYPES: MovementType[] = [
+  MovementType.VENTA,
+  MovementType.DAÑO,
+  MovementType.VENCIMIENTO,
+  MovementType.AJUSTE_SALIDA,
+];
+
+const ALLOWED_MIMETYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_EVIDENCE_IMAGES = 4;
 
 const STOCK_DIRECTION: Record<MovementType, number> = {
   [MovementType.ENTRADA]: 1,
@@ -242,6 +253,32 @@ class MovementService {
 
   getMovementsByUser(userId: string): Promise<Movement[]> {
     return movementRepository.findByUserId(userId);
+  }
+
+  async uploadEvidence(id: string, fileBuffer: Buffer, mimetype: string): Promise<Movement> {
+    const movement = await this.getMovementById(id);
+
+    if (!SALIDA_TYPES.includes(movement.type)) {
+      throw new Error('La evidencia fotográfica solo aplica para movimientos de tipo salida');
+    }
+
+    if (movement.isAnnulled) {
+      throw new Error('No se puede agregar evidencia a un movimiento anulado');
+    }
+
+    if (!ALLOWED_MIMETYPES.includes(mimetype)) {
+      throw new Error('Formato de imagen no permitido. Use JPEG, PNG o WebP');
+    }
+
+    const current = movement.evidenceUrls ?? [];
+    if (current.length >= MAX_EVIDENCE_IMAGES) {
+      throw new Error(`No se pueden agregar más de ${MAX_EVIDENCE_IMAGES} imágenes por movimiento`);
+    }
+
+    const url = await uploadImage(fileBuffer, 'stockly/movements');
+    movement.evidenceUrls = [...current, url];
+    await movementRepository.save(movement);
+    return this.getMovementById(id);
   }
 
   private getShift(date: Date): Shift {

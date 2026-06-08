@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { MovementType, ClientType, ProductDetail, ClientOption, TYPE_LABELS, ALL_MOVEMENT_TYPES } from './types';
 import { useToast } from '@/components/ui/Toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+
+const SALIDA_TYPES: MovementType[] = ['VENTA', 'DAÑO', 'VENCIMIENTO', 'AJUSTE_SALIDA'];
+const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_EVIDENCE = 4;
 
 const TYPE_ROLES: Record<MovementType, string[]> = {
   ENTRADA: ['Admin', 'Almacenista'],
@@ -275,6 +279,101 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+function EvidenceMultiZone({
+  files,
+  onAdd,
+  onRemove,
+}: {
+  files: File[];
+  onAdd: (f: File) => void;
+  onRemove: (i: number) => void;
+}) {
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
+
+  const validateAndAdd = (f: File) => {
+    if (!ALLOWED_MIME.includes(f.type)) { toast('Formato no permitido. Use JPEG, PNG o WebP', 'error'); return; }
+    if (f.size > 10 * 1024 * 1024) { toast('El archivo no puede superar 10 MB', 'error'); return; }
+    if (files.length >= MAX_EVIDENCE) return;
+    onAdd(f);
+  };
+
+  const handleFileList = (list: FileList) => {
+    const slots = MAX_EVIDENCE - files.length;
+    Array.from(list).slice(0, slots).forEach(validateAndAdd);
+  };
+
+  const AddCell = () => (
+    <button
+      type="button"
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => { e.preventDefault(); setDragging(false); handleFileList(e.dataTransfer.files); }}
+      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-all duration-150 text-muted ${
+        files.length === 0 ? 'py-8 w-full' : 'h-28'
+      } ${dragging ? 'border-brand-400 bg-brand-50' : 'border-line bg-subtle hover:border-brand-300 hover:text-ink'}`}
+    >
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <rect x="2" y="4" width="18" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.3" />
+        <circle cx="8" cy="9" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M2 16l5-4 3.5 3.5 2.5-2.5 5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {files.length === 0 ? (
+        <>
+          <span className="text-sm">Agregar evidencia fotográfica</span>
+          <span className="text-xs">Opcional · JPEG, PNG o WebP · Máx. 10 MB · Hasta {MAX_EVIDENCE} imágenes</span>
+        </>
+      ) : (
+        <span className="text-xs font-medium">Agregar</span>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => { if (e.target.files) handleFileList(e.target.files); e.target.value = ''; }}
+      />
+    </button>
+  );
+
+  if (files.length === 0) return <AddCell />;
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {files.map((f, i) => (
+        <div key={i} className="relative h-28 rounded-xl overflow-hidden border border-line shadow-card-sm">
+          {previews[i] && (
+            <img src={previews[i]} alt={`Evidencia ${i + 1}`} className="w-full h-full object-cover" />
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(i)}
+            className="absolute top-1.5 right-1.5 p-1 rounded-full bg-white/90 hover:bg-red-50 text-ink hover:text-red-600 transition-colors shadow-sm"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-black/30 backdrop-blur-sm">
+            <p className="text-xs text-white truncate">{f.name}</p>
+          </div>
+        </div>
+      ))}
+      {files.length < MAX_EVIDENCE && <AddCell />}
+    </div>
+  );
+}
+
 export default function NewMovementClient({ rol, initialType }: { rol: string; initialType?: MovementType | null }) {
   const { toast } = useToast();
   const allowedTypes = ALL_MOVEMENT_TYPES.filter((t) => TYPE_ROLES[t].includes(rol));
@@ -289,6 +388,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -321,6 +421,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
     setProductQuery('');
     setSelectedProduct(null);
     setProductError('');
+    if (!SALIDA_TYPES.includes(type)) setEvidenceFiles([]);
   };
 
   const validate = (): boolean => {
@@ -398,12 +499,33 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
         body: JSON.stringify(buildBody()),
       });
       if (!res.ok) { const d = await res.json(); toast(d.error ?? 'Error al registrar', 'error'); return; }
+      const created = await res.json();
+      const movementId: string = created?.movement?.id ?? created?.id ?? null;
+
+      if (evidenceFiles.length > 0 && movementId && SALIDA_TYPES.includes(selectedType!)) {
+        let anyFailed = false;
+        for (const file of evidenceFiles) {
+          const fd = new FormData();
+          fd.append('file', file);
+          try {
+            const evRes = await fetch(`/api/v1/movements/${movementId}/evidence`, { method: 'POST', body: fd });
+            if (!evRes.ok) anyFailed = true;
+          } catch {
+            anyFailed = true;
+          }
+        }
+        if (anyFailed) {
+          toast('Movimiento registrado pero alguna imagen no pudo subirse', 'error');
+        }
+      }
+
       toast(`${TYPE_LABELS[selectedType!]} registrada correctamente`);
       setSelectedType(null);
       setProductQuery('');
       setSelectedProduct(null);
       setForm(EMPTY_FORM);
       setErrors({});
+      setEvidenceFiles([]);
     } catch {
       toast('Error de conexión', 'error');
     } finally {
@@ -617,6 +739,24 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
               />
               {errors.motivo && <p className="text-xs text-red-500">{errors.motivo}</p>}
             </Field>
+          )}
+
+          {SALIDA_TYPES.includes(selectedType) && (
+            <div className="animate-fade-in space-y-1.5">
+              <label className="block text-xs font-semibold text-muted uppercase tracking-wider">
+                Evidencia fotográfica
+                {evidenceFiles.length > 0 && (
+                  <span className="ml-2 text-brand-500 normal-case font-normal">
+                    {evidenceFiles.length}/{MAX_EVIDENCE}
+                  </span>
+                )}
+              </label>
+              <EvidenceMultiZone
+                files={evidenceFiles}
+                onAdd={(f) => setEvidenceFiles((prev) => [...prev, f])}
+                onRemove={(i) => setEvidenceFiles((prev) => prev.filter((_, idx) => idx !== i))}
+              />
+            </div>
           )}
 
           <div className="pt-1">

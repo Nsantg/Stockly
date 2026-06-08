@@ -97,6 +97,9 @@ export class Movement {
   @Column({ type: 'enum', enum: LocationType, nullable: true })
   targetLocation!: LocationType | null;
 
+  @Column({ type: 'json', nullable: true })
+  evidenceUrls!: string[] | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

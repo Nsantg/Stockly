@@ -10,6 +10,8 @@ import {
 import { UserRole } from '../entity/UserRole';
 import { MovementType } from '../entity/MovementType';
 
+const EVIDENCE_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR];
+
 function handleError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return NextResponse.json(
@@ -407,6 +409,80 @@ class MovementController {
       const movements = await movementService.getMovementsByUser(userId);
       return NextResponse.json(movements);
     } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v1/movements/{id}/evidence:
+   *   post:
+   *     summary: Sube evidencia fotográfica para un movimiento de tipo salida
+   *     tags:
+   *       - Movements
+   *     security:
+   *       - cookieAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - file
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: Imagen en formato JPEG, PNG o WebP (máx. 5 MB)
+   *     responses:
+   *       200:
+   *         description: Evidencia subida correctamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Movement'
+   *       400:
+   *         $ref: '#/components/responses/ValidationError'
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       403:
+   *         $ref: '#/components/responses/Forbidden'
+   *       404:
+   *         $ref: '#/components/responses/NotFound'
+   *       500:
+   *         $ref: '#/components/responses/InternalError'
+   */
+  async uploadEvidence(request: NextRequest, id: string): Promise<NextResponse> {
+    const auth = await requireRoles(EVIDENCE_ROLES);
+    if (!auth.ok) return auth.response;
+
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File | null;
+
+      if (!file) {
+        return NextResponse.json({ error: 'No se envió ningún archivo' }, { status: 400 });
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: 'El archivo no puede superar 5MB' }, { status: 400 });
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const movement = await movementService.uploadEvidence(id, buffer, file.type);
+      return NextResponse.json(movement);
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return NextResponse.json({ error: (error as Error).message }, { status: 404 });
+      }
       return handleError(error);
     }
   }

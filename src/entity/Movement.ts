@@ -97,6 +97,9 @@ export class Movement {
   @Column({ type: 'enum', enum: LocationType, nullable: true })
   targetLocation!: LocationType | null;
 
+  @Column({ nullable: true, type: 'varchar', length: 500 })
+  evidenceUrl!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

@@ -128,6 +128,11 @@ class MovementRepository {
       .getRawOne<{ total: string }>();
     return parseInt(result?.total ?? '0', 10);
   }
+
+  async save(movement: Movement): Promise<Movement> {
+    const repo = await this.getRepo();
+    return repo.save(movement);
+  }
 }
 
 export const movementRepository = new MovementRepository();

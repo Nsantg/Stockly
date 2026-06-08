@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { MovementType, ClientType, ProductDetail, ClientOption, TYPE_LABELS, ALL_MOVEMENT_TYPES } from './types';
 import { useToast } from '@/components/ui/Toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+
+const SALIDA_TYPES: MovementType[] = ['VENTA', 'DAÑO', 'VENCIMIENTO', 'AJUSTE_SALIDA'];
+const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 const TYPE_ROLES: Record<MovementType, string[]> = {
   ENTRADA: ['Admin', 'Almacenista'],
@@ -275,6 +278,95 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+function EvidenceDropZone({
+  file,
+  onFile,
+  onClear,
+}: {
+  file: File | null;
+  onFile: (f: File) => void;
+  onClear: () => void;
+}) {
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) { setPreviewUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const handleFile = (f: File) => {
+    if (!ALLOWED_MIME.includes(f.type)) {
+      toast('Formato no permitido. Use JPEG, PNG o WebP', 'error');
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      toast('El archivo no puede superar 5 MB', 'error');
+      return;
+    }
+    onFile(f);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  };
+
+  if (file && previewUrl) {
+    return (
+      <div className="space-y-1.5">
+        <div className="relative rounded-xl overflow-hidden" style={{ height: 160 }}>
+          <img src={previewUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute top-2 right-2 p-1 rounded-full bg-white/90 hover:bg-red-50 text-ink hover:text-red-600 transition-colors shadow-sm"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-xs text-muted truncate">{file.name}</p>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      className={`w-full flex flex-col items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed transition-all duration-150 ${
+        dragging ? 'border-brand-400 bg-brand-50' : 'border-line bg-subtle hover:border-brand-300'
+      }`}
+    >
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-muted">
+        <rect x="3" y="5" width="22" height="18" rx="3" stroke="currentColor" strokeWidth="1.4" />
+        <circle cx="10" cy="11" r="2" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M3 19l6-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className="text-sm text-muted">Agregar evidencia fotográfica</span>
+      <span className="text-xs text-muted">Opcional · JPEG, PNG o WebP · Máx. 5 MB</span>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+      />
+    </button>
+  );
+}
+
 export default function NewMovementClient({ rol, initialType }: { rol: string; initialType?: MovementType | null }) {
   const { toast } = useToast();
   const allowedTypes = ALL_MOVEMENT_TYPES.filter((t) => TYPE_ROLES[t].includes(rol));
@@ -289,6 +381,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -321,6 +414,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
     setProductQuery('');
     setSelectedProduct(null);
     setProductError('');
+    if (!SALIDA_TYPES.includes(type)) setEvidenceFile(null);
   };
 
   const validate = (): boolean => {
@@ -398,12 +492,32 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
         body: JSON.stringify(buildBody()),
       });
       if (!res.ok) { const d = await res.json(); toast(d.error ?? 'Error al registrar', 'error'); return; }
+      const created = await res.json();
+      const movementId: string = created?.movement?.id ?? created?.id ?? null;
+
+      if (evidenceFile && movementId && SALIDA_TYPES.includes(selectedType!)) {
+        const fd = new FormData();
+        fd.append('file', evidenceFile);
+        try {
+          const evRes = await fetch(`/api/v1/movements/${movementId}/evidence`, {
+            method: 'POST',
+            body: fd,
+          });
+          if (!evRes.ok) {
+            toast('Movimiento registrado pero la evidencia no pudo subirse', 'error');
+          }
+        } catch {
+          toast('Movimiento registrado pero la evidencia no pudo subirse', 'error');
+        }
+      }
+
       toast(`${TYPE_LABELS[selectedType!]} registrada correctamente`);
       setSelectedType(null);
       setProductQuery('');
       setSelectedProduct(null);
       setForm(EMPTY_FORM);
       setErrors({});
+      setEvidenceFile(null);
     } catch {
       toast('Error de conexión', 'error');
     } finally {
@@ -617,6 +731,19 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
               />
               {errors.motivo && <p className="text-xs text-red-500">{errors.motivo}</p>}
             </Field>
+          )}
+
+          {SALIDA_TYPES.includes(selectedType) && (
+            <div className="animate-fade-in space-y-1.5">
+              <label className="block text-xs font-semibold text-muted uppercase tracking-wider">
+                Evidencia fotográfica
+              </label>
+              <EvidenceDropZone
+                file={evidenceFile}
+                onFile={setEvidenceFile}
+                onClear={() => setEvidenceFile(null)}
+              />
+            </div>
           )}
 
           <div className="pt-1">

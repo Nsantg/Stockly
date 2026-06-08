@@ -304,8 +304,8 @@ function EvidenceDropZone({
       toast('Formato no permitido. Use JPEG, PNG o WebP', 'error');
       return;
     }
-    if (f.size > 5 * 1024 * 1024) {
-      toast('El archivo no puede superar 5 MB', 'error');
+    if (f.size > 10 * 1024 * 1024) {
+      toast('El archivo no puede superar 10 MB', 'error');
       return;
     }
     onFile(f);
@@ -355,7 +355,7 @@ function EvidenceDropZone({
         <path d="M3 19l6-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span className="text-sm text-muted">Agregar evidencia fotográfica</span>
-      <span className="text-xs text-muted">Opcional · JPEG, PNG o WebP · Máx. 5 MB</span>
+      <span className="text-xs text-muted">Opcional · JPEG, PNG o WebP · Máx. 10 MB</span>
       <input
         ref={inputRef}
         type="file"

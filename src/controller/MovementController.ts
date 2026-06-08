@@ -472,8 +472,8 @@ class MovementController {
         return NextResponse.json({ error: 'No se envió ningún archivo' }, { status: 400 });
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        return NextResponse.json({ error: 'El archivo no puede superar 5MB' }, { status: 400 });
+      if (file.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ error: 'El archivo no puede superar 10MB' }, { status: 400 });
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());

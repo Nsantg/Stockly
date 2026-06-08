@@ -401,7 +401,7 @@ function EvidenceBlock({
   const canUpload = EVIDENCE_UPLOAD_ROLES.includes(rol);
 
   const handleUpload = async (file: File) => {
-    if (file.size > 5 * 1024 * 1024) { toast('El archivo no puede superar 5 MB', 'error'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast('El archivo no puede superar 10 MB', 'error'); return; }
     setUploading(true);
     try {
       const fd = new FormData();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import {
   Movement,
   MovementsPage,
@@ -836,9 +836,8 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
               </thead>
               <tbody>
                 {filtered.map((mov) => (
-                  <>
+                  <Fragment key={mov.id}>
                     <tr
-                      key={mov.id}
                       onClick={() => setExpandedId((p) => (p === mov.id ? null : mov.id))}
                       className={`border-b border-line cursor-pointer transition-colors ${expandedId === mov.id ? 'bg-subtle' : 'hover:bg-subtle/60'}`}
                     >
@@ -918,7 +917,7 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

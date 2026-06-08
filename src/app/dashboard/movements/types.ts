@@ -72,6 +72,7 @@ export interface Movement {
   returnDescription: string | null;
   sourceLocation: LocationType | null;
   targetLocation: LocationType | null;
+  evidenceUrl: string | null;
   createdAt: string;
 }
 

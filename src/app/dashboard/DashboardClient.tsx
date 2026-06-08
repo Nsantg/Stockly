@@ -361,6 +361,11 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
   const [period, setPeriod] = useState<Period>('today')
   const [kpis, setKpis] = useState<DashboardKpis | null>(null)
   const [movements, setMovements] = useState<RecentMovement[] | null>(null)
+  const [greeting, setGreeting] = useState<string | null>(null)
+
+  useEffect(() => {
+    setGreeting(getGreeting(user.nombre))
+  }, [user.nombre])
 
   useEffect(() => {
     fetch('/api/v1/movements?limit=5')
@@ -395,7 +400,7 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
     <div className="space-y-6">
       <div className="animate-fade-in-up flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink">{getGreeting(user.nombre)}</h2>
+          <h2 className="text-xl font-semibold text-ink">{greeting ?? `Hola, ${user.nombre}`}</h2>
           <p className="text-sm text-muted mt-0.5">Aquí tienes el resumen operativo de hoy</p>
         </div>
         <PeriodSelector active={period} onChange={setPeriod} />

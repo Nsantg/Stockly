@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/Toast';
 
 const SALIDA_TYPES: MovementType[] = ['VENTA', 'DAÑO', 'VENCIMIENTO', 'AJUSTE_SALIDA'];
 const EVIDENCE_UPLOAD_ROLES = ['Admin', 'Almacenista', 'Despachador'];
+const MAX_EVIDENCE = 4;
 
 const ANNUL_ROLES = ['Admin', 'Almacenista'];
 const LIMIT = 15;
@@ -348,37 +349,67 @@ function EditDispatchModal({
   );
 }
 
-function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+function Lightbox({
+  urls,
+  index,
+  onClose,
+  onNav,
+}: {
+  urls: string[];
+  index: number;
+  onClose: () => void;
+  onNav: (i: number) => void;
+}) {
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && index > 0) onNav(index - 1);
+      if (e.key === 'ArrowRight' && index < urls.length - 1) onNav(index + 1);
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, index, urls.length, onNav]);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-    >
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative z-10 max-w-4xl w-full flex items-center justify-center">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-4xl flex items-center justify-center gap-3">
         <button
-          onClick={onClose}
-          className="absolute top-0 right-0 -mt-10 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+          onClick={() => onNav(index - 1)}
+          disabled={index === 0}
+          className="shrink-0 p-2 rounded-full bg-white/15 hover:bg-white/25 disabled:opacity-0 text-white transition-colors"
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <img
-          src={src}
-          alt="Evidencia fotográfica"
-          className="max-h-[80vh] max-w-full object-contain rounded-xl shadow-2xl"
-        />
+        <div className="flex flex-col items-center gap-2 min-w-0">
+          <button
+            onClick={onClose}
+            className="self-end p-1.5 rounded-full bg-white/15 hover:bg-white/25 text-white transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+          <img
+            src={urls[index]}
+            alt={`Evidencia ${index + 1}`}
+            className="max-h-[75vh] max-w-full object-contain rounded-xl shadow-2xl"
+          />
+          {urls.length > 1 && (
+            <p className="text-white/60 text-xs">{index + 1} / {urls.length}</p>
+          )}
+        </div>
+        <button
+          onClick={() => onNav(index + 1)}
+          disabled={index === urls.length - 1}
+          className="shrink-0 p-2 rounded-full bg-white/15 hover:bg-white/25 disabled:opacity-0 text-white transition-colors"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -391,14 +422,14 @@ function EvidenceBlock({
 }: {
   movement: Movement;
   rol: string;
-  onEvidenceUploaded: (url: string) => void;
+  onEvidenceUploaded: (urls: string[]) => void;
 }) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const canUpload = EVIDENCE_UPLOAD_ROLES.includes(rol);
+  const urls = movement.evidenceUrls ?? [];
 
   const handleUpload = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) { toast('El archivo no puede superar 10 MB', 'error'); return; }
@@ -409,10 +440,8 @@ function EvidenceBlock({
       const res = await fetch(`/api/v1/movements/${movement.id}/evidence`, { method: 'POST', body: fd });
       if (!res.ok) { const d = await res.json(); toast(d.error ?? 'Error al subir evidencia', 'error'); return; }
       const updated: Movement = await res.json();
-      if (updated.evidenceUrl) {
-        onEvidenceUploaded(updated.evidenceUrl);
-        toast('Evidencia agregada correctamente');
-      }
+      onEvidenceUploaded(updated.evidenceUrls ?? []);
+      toast('Evidencia agregada correctamente');
     } catch {
       toast('Error de conexión', 'error');
     } finally {
@@ -420,77 +449,78 @@ function EvidenceBlock({
     }
   };
 
-  if (movement.evidenceUrl) {
-    return (
-      <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-muted uppercase tracking-wider">Evidencia fotográfica</p>
-        <div
-          className={`relative rounded-xl overflow-hidden cursor-pointer bg-subtle ${loaded ? '' : 'animate-pulse'}`}
-          style={{ maxHeight: 280 }}
-          onClick={() => setLightboxOpen(true)}
-        >
-          <img
-            src={movement.evidenceUrl}
-            alt="Evidencia"
-            onLoad={() => setLoaded(true)}
-            className="w-full object-contain rounded-xl"
-            style={{ maxHeight: 280 }}
-          />
-        </div>
-        {lightboxOpen && (
-          <Lightbox src={movement.evidenceUrl} onClose={() => setLightboxOpen(false)} />
-        )}
-      </div>
-    );
-  }
-
-  if (movement.isAnnulled) {
-    return (
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-muted uppercase tracking-wider">Evidencia fotográfica</p>
-        <p className="text-xs text-muted">Sin evidencia</p>
-      </div>
-    );
-  }
-
-  if (!canUpload) {
-    return (
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-muted uppercase tracking-wider">Evidencia fotográfica</p>
-        <p className="text-xs text-muted">Sin evidencia</p>
-      </div>
-    );
-  }
+  const showAddButton = !movement.isAnnulled && canUpload && urls.length < MAX_EVIDENCE;
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-muted uppercase tracking-wider">Evidencia fotográfica</p>
-      <button
-        type="button"
-        onClick={() => !uploading && inputRef.current?.click()}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-line hover:border-brand-300 bg-subtle hover:bg-white text-muted hover:text-ink transition-all text-xs"
-        style={{ minHeight: 80 }}
-      >
-        {uploading ? (
-          <svg className="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="28" strokeDashoffset="10" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="6" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.1" />
-            <path d="M1 11l4-3.5 3 3 2-2 4 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-        <span>{uploading ? 'Subiendo…' : 'Sin evidencia · Click para agregar'}</span>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ''; }}
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted uppercase tracking-wider">
+        Evidencia fotográfica
+        {urls.length > 0 && <span className="ml-1.5 font-normal normal-case text-muted">({urls.length})</span>}
+      </p>
+
+      {urls.length === 0 && !showAddButton && (
+        <p className="text-xs text-muted italic">Sin evidencia</p>
+      )}
+
+      {(urls.length > 0 || showAddButton) && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {urls.map((url, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setLightboxIndex(i)}
+              className="group relative h-24 rounded-xl overflow-hidden border border-line shadow-card-sm bg-subtle hover:border-brand-300 transition-colors"
+            >
+              <img src={url} alt={`Evidencia ${i + 1}`} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
+                <svg
+                  width="20" height="20" viewBox="0 0 20 20" fill="none"
+                  className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
+                >
+                  <path d="M8 3H4a1 1 0 0 0-1 1v4m14-5h-4a1 1 0 0 1 1 1v4m-14 5v4a1 1 0 0 0 1 1h4m10-1v-4a1 1 0 0 1 1-1h-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </button>
+          ))}
+
+          {showAddButton && (
+            <button
+              type="button"
+              onClick={() => !uploading && inputRef.current?.click()}
+              className="h-24 rounded-xl border-2 border-dashed border-line bg-subtle hover:border-brand-300 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-ink transition-colors"
+            >
+              {uploading ? (
+                <svg className="animate-spin" width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" strokeDasharray="34" strokeDashoffset="12" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <rect x="1.5" y="3" width="15" height="12" rx="2" stroke="currentColor" strokeWidth="1.2" />
+                  <circle cx="6.5" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.1" />
+                  <path d="M1.5 13l4.5-4 3.5 3.5 2.5-2 4.5 4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+              <span className="text-xs font-medium">{uploading ? 'Subiendo…' : 'Agregar'}</span>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ''; }}
+              />
+            </button>
+          )}
+        </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          urls={urls}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNav={setLightboxIndex}
         />
-      </button>
+      )}
     </div>
   );
 }
@@ -578,7 +608,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 export default function MovementHistoryClient({ rol }: { rol: string }) {
   const { toast } = useToast();
   const canAnnul = ANNUL_ROLES.includes(rol);
-  const [localEvidence, setLocalEvidence] = useState<Record<string, string>>({});
+  const [localEvidence, setLocalEvidence] = useState<Record<string, string[]>>({});
 
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -876,10 +906,10 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
                             {SALIDA_TYPES.includes(mov.type) && (
                               <div className="sm:col-span-2 pt-1">
                                 <EvidenceBlock
-                                  movement={{ ...mov, evidenceUrl: localEvidence[mov.id] ?? mov.evidenceUrl }}
+                                  movement={{ ...mov, evidenceUrls: localEvidence[mov.id] ?? mov.evidenceUrls }}
                                   rol={rol}
-                                  onEvidenceUploaded={(url) =>
-                                    setLocalEvidence((prev) => ({ ...prev, [mov.id]: url }))
+                                  onEvidenceUploaded={(urls) =>
+                                    setLocalEvidence((prev) => ({ ...prev, [mov.id]: urls }))
                                   }
                                 />
                               </div>

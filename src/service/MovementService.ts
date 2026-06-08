@@ -53,6 +53,7 @@ const SALIDA_TYPES: MovementType[] = [
 ];
 
 const ALLOWED_MIMETYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_EVIDENCE_IMAGES = 4;
 
 const STOCK_DIRECTION: Record<MovementType, number> = {
   [MovementType.ENTRADA]: 1,
@@ -269,8 +270,13 @@ class MovementService {
       throw new Error('Formato de imagen no permitido. Use JPEG, PNG o WebP');
     }
 
+    const current = movement.evidenceUrls ?? [];
+    if (current.length >= MAX_EVIDENCE_IMAGES) {
+      throw new Error(`No se pueden agregar más de ${MAX_EVIDENCE_IMAGES} imágenes por movimiento`);
+    }
+
     const url = await uploadImage(fileBuffer, 'stockly/movements');
-    movement.evidenceUrl = url;
+    movement.evidenceUrls = [...current, url];
     await movementRepository.save(movement);
     return this.getMovementById(id);
   }

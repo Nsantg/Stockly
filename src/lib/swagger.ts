@@ -296,11 +296,13 @@ const definition: swaggerJsdoc.OAS3Definition = {
           returnDescription: { type: 'string', nullable: true },
           sourceLocation: { allOf: [{ $ref: '#/components/schemas/LocationType' }], nullable: true },
           targetLocation: { allOf: [{ $ref: '#/components/schemas/LocationType' }], nullable: true },
-          evidenceUrl: {
-            type: 'string',
+          evidenceUrls: {
+            type: 'array',
             nullable: true,
-            description: 'URL de evidencia fotográfica en Cloudinary. Solo aplica para movimientos de tipo salida',
-            example: 'https://res.cloudinary.com/stockly/image/upload/stockly/movements/abc123.jpg',
+            items: { type: 'string', format: 'uri' },
+            maxItems: 4,
+            description: 'URLs de evidencia fotográfica en Cloudinary (máx. 4). Solo aplica para movimientos de tipo salida',
+            example: ['https://res.cloudinary.com/stockly/image/upload/stockly/movements/abc123.jpg'],
           },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },

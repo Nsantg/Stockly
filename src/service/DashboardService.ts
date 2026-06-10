@@ -22,6 +22,9 @@ export interface DashboardKpis {
     productName: string;
     totalDispatched: number;
   } | null;
+  rotationIndex: number;
+  damagedIndex: number;
+  discardRate: number;
 }
 
 class DashboardService {
@@ -191,6 +194,91 @@ class DashboardService {
     };
   }
 
+  private async getRotationIndex(filter?: PeriodFilter): Promise<number> {
+    const repo = await this.movementRepo();
+    const productRepo = await this.productRepo();
+
+    const ventaQb = repo
+      .createQueryBuilder('movement')
+      .select('COALESCE(SUM(movement.quantity), 0)', 'total')
+      .where('movement.type = :type', { type: MovementType.VENTA })
+      .andWhere('movement.isAnnulled = false');
+    this.applyPeriodFilter(ventaQb as never, filter);
+    const ventaRaw = await ventaQb.getRawOne<{ total: string }>();
+    const dispatched = parseInt(ventaRaw?.total ?? '0', 10);
+
+    const entradaQb = repo
+      .createQueryBuilder('movement')
+      .select('COALESCE(SUM(movement.quantity), 0)', 'total')
+      .where('movement.type = :type', { type: MovementType.ENTRADA })
+      .andWhere('movement.isAnnulled = false');
+    this.applyPeriodFilter(entradaQb as never, filter);
+    const entradaRaw = await entradaQb.getRawOne<{ total: string }>();
+    const entries = parseInt(entradaRaw?.total ?? '0', 10);
+
+    const stockRaw = await productRepo
+      .createQueryBuilder('product')
+      .select('COALESCE(SUM(product.stock), 0)', 'total')
+      .where('product.isActive = true')
+      .andWhere('product.deletedAt IS NULL')
+      .getRawOne<{ total: string }>();
+    const currentStock = parseInt(stockRaw?.total ?? '0', 10);
+
+    const beginningStock = currentStock - entries + dispatched;
+    const averageStock = (beginningStock + currentStock) / 2;
+    if (averageStock === 0) return 0;
+    return Math.round((dispatched / averageStock) * 100) / 100;
+  }
+
+  private async getDamagedIndex(filter?: PeriodFilter): Promise<number> {
+    const repo = await this.movementRepo();
+
+    const damagedQb = repo
+      .createQueryBuilder('movement')
+      .select('COALESCE(SUM(movement.quantity), 0)', 'total')
+      .where('movement.type IN (:...types)', { types: [MovementType.DAÑO, MovementType.VENCIMIENTO] })
+      .andWhere('movement.isAnnulled = false');
+    this.applyPeriodFilter(damagedQb as never, filter);
+    const damagedRaw = await damagedQb.getRawOne<{ total: string }>();
+    const damaged = parseInt(damagedRaw?.total ?? '0', 10);
+
+    const allQb = repo
+      .createQueryBuilder('movement')
+      .select('COALESCE(SUM(movement.quantity), 0)', 'total')
+      .where('movement.isAnnulled = false');
+    this.applyPeriodFilter(allQb as never, filter);
+    const allRaw = await allQb.getRawOne<{ total: string }>();
+    const all = parseInt(allRaw?.total ?? '0', 10);
+
+    if (all === 0) return 0;
+    return Math.round((damaged / all) * 100 * 100) / 100;
+  }
+
+  private async getDiscardRate(filter?: PeriodFilter): Promise<number> {
+    const repo = await this.movementRepo();
+    const productRepo = await this.productRepo();
+
+    const damagedQb = repo
+      .createQueryBuilder('movement')
+      .select('COALESCE(SUM(movement.quantity), 0)', 'total')
+      .where('movement.type IN (:...types)', { types: [MovementType.DAÑO, MovementType.VENCIMIENTO] })
+      .andWhere('movement.isAnnulled = false');
+    this.applyPeriodFilter(damagedQb as never, filter);
+    const damagedRaw = await damagedQb.getRawOne<{ total: string }>();
+    const damaged = parseInt(damagedRaw?.total ?? '0', 10);
+
+    const stockRaw = await productRepo
+      .createQueryBuilder('product')
+      .select('COALESCE(SUM(product.stock), 0)', 'total')
+      .where('product.isActive = true')
+      .andWhere('product.deletedAt IS NULL')
+      .getRawOne<{ total: string }>();
+    const totalStock = parseInt(stockRaw?.total ?? '0', 10);
+
+    if (totalStock === 0) return 0;
+    return Math.round((damaged / totalStock) * 100 * 100) / 100;
+  }
+
   async getAllKpis(filter?: PeriodFilter): Promise<DashboardKpis> {
     const [
       dispatchedUnits,
@@ -201,6 +289,9 @@ class DashboardService {
       minStockProduct,
       stockPercentage,
       topRotationProduct,
+      rotationIndex,
+      damagedIndex,
+      discardRate,
     ] = await Promise.all([
       this.getDispatchedUnits(filter),
       this.getDispatchCount(filter),
@@ -210,6 +301,9 @@ class DashboardService {
       this.getMinStockProduct(),
       this.getStockPercentage(),
       this.getTopRotationProduct(filter),
+      this.getRotationIndex(filter),
+      this.getDamagedIndex(filter),
+      this.getDiscardRate(filter),
     ]);
 
     return {
@@ -221,6 +315,9 @@ class DashboardService {
       minStockProduct,
       stockPercentage,
       topRotationProduct,
+      rotationIndex,
+      damagedIndex,
+      discardRate,
     };
   }
 }

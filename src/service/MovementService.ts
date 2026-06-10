@@ -173,11 +173,12 @@ class MovementService {
         await queryRunner.manager.save(Product, product);
       }
 
-      movement.isAnnulled = true;
-      movement.annulledAt = new Date();
-      movement.annulledById = data.userId;
-      movement.annulledReason = data.reason;
-      await queryRunner.manager.save(Movement, movement);
+      await queryRunner.manager.update(Movement, movement.id, {
+        isAnnulled: true,
+        annulledAt: new Date(),
+        annulledById: data.userId,
+        annulledReason: data.reason,
+      });
 
       await queryRunner.commitTransaction();
       return this.getMovementById(id);

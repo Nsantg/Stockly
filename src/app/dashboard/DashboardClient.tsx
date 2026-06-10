@@ -68,6 +68,9 @@ interface DashboardKpis {
   minStockProduct: { productId: string; productName: string; stock: number } | null
   stockPercentage: number
   topRotationProduct: { productId: string; productName: string; totalDispatched: number } | null
+  rotationIndex: number
+  damagedIndex: number
+  discardRate: number
 }
 
 const DEFAULT_KPIS: DashboardKpis = {
@@ -79,6 +82,9 @@ const DEFAULT_KPIS: DashboardKpis = {
   minStockProduct: null,
   stockPercentage: 0,
   topRotationProduct: null,
+  rotationIndex: 0,
+  damagedIndex: 0,
+  discardRate: 0,
 }
 
 const PERIODS: { id: Period; label: string }[] = [
@@ -348,12 +354,64 @@ function ActivityItem({ movement, index }: { movement: RecentMovement; index: nu
   )
 }
 
+function IconCycle() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2.5 9A6.5 6.5 0 0 1 9 2.5M15.5 9A6.5 6.5 0 0 1 9 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9 2.5L11.5 4.5M9 2.5L6.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 15.5L11.5 13.5M9 15.5L6.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconAlert() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 3L16 14.5H2L9 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 8v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="9" cy="12.5" r="0.8" fill="currentColor" />
+    </svg>
+  )
+}
+
+function IconTrash() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 5h12M7 5V3.5h4V5M13 5l-1 10H6L5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function minStockBadge(stock: number) {
   if (stock === 0)
     return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Sin stock</span>
   if (stock < 10)
     return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-600 border border-accent-100">Bajo</span>
   return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Ok</span>
+}
+
+function rotationBadge(value: number) {
+  if (value >= 1.5)
+    return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Buena rotación</span>
+  if (value >= 0.5)
+    return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-600 border border-accent-100">Rotación media</span>
+  return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Rotación baja</span>
+}
+
+function damagedBadge(value: number) {
+  if (value <= 2)
+    return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Nivel óptimo</span>
+  if (value <= 5)
+    return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-600 border border-accent-100">Nivel medio</span>
+  return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Nivel alto</span>
+}
+
+function discardBadge(value: number) {
+  if (value <= 1)
+    return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Descarte bajo</span>
+  if (value <= 3)
+    return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-50 text-accent-600 border border-accent-100">Descarte medio</span>
+  return <span className="mt-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">Descarte alto</span>
 }
 
 export default function DashboardClient({ user }: { user: DashboardUser }) {
@@ -480,7 +538,34 @@ export default function DashboardClient({ user }: { user: DashboardUser }) {
         )}
       </div>
 
-      <div className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5" style={{ animationDelay: '300ms' }}>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3 animate-fade-in-up" style={{ animationDelay: '280ms' }}>
+          Indicadores de calidad
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {kpis === null ? (
+            <>
+              <KpiSkeleton delay={280} />
+              <KpiSkeleton delay={340} />
+              <KpiSkeleton delay={400} />
+            </>
+          ) : (
+            <>
+              <KpiCard icon={<IconCycle />} label="Índice de rotación" value={kpis.rotationIndex.toFixed(2)} delay={280}>
+                {rotationBadge(kpis.rotationIndex)}
+              </KpiCard>
+              <KpiCard icon={<IconAlert />} label="Índice de dañados" value={`${kpis.damagedIndex.toFixed(2)}%`} delay={340}>
+                {damagedBadge(kpis.damagedIndex)}
+              </KpiCard>
+              <KpiCard icon={<IconTrash />} label="Tasa de descarte" value={`${kpis.discardRate.toFixed(2)}%`} delay={400}>
+                {discardBadge(kpis.discardRate)}
+              </KpiCard>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="animate-fade-in-up bg-white rounded-2xl shadow-card-sm p-5" style={{ animationDelay: '460ms' }}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted">Actividad reciente</p>
           <Link href="/dashboard/movements" className="text-xs text-brand-500 hover:text-brand-600 font-medium transition-colors">

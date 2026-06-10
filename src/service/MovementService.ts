@@ -13,18 +13,30 @@ import { productRepository } from '../repository/ProductRepository';
 import { MovementFactory } from './movement/MovementFactory';
 import { uploadImage } from '../lib/cloudinary';
 
-const createMovementSchema = z.object({
-  type: z.nativeEnum(MovementType),
-  productId: z.string().uuid('El productId debe ser un UUID válido'),
-  quantity: z.number().int().positive('La cantidad debe ser un entero positivo'),
-  userId: z.string().uuid('El userId debe ser un UUID válido'),
-  observations: z.string().trim().optional(),
-  clientId: z.string().uuid('El clientId debe ser un UUID válido').optional(),
-  clientType: z.nativeEnum(ClientType).optional(),
-  totalWeight: z.number().positive('El peso total debe ser positivo').optional(),
-  returnCause: z.string().trim().optional(),
-  returnDescription: z.string().trim().optional(),
-});
+const ADJUSTMENT_TYPES: MovementType[] = [MovementType.AJUSTE_INGRESO, MovementType.AJUSTE_SALIDA];
+
+const createMovementSchema = z
+  .object({
+    type: z.nativeEnum(MovementType),
+    productId: z.string().uuid('El productId debe ser un UUID válido').optional(),
+    sourceMovementId: z.string().uuid('El sourceMovementId debe ser un UUID válido').optional(),
+    quantity: z.number().int().positive('La cantidad debe ser un entero positivo'),
+    userId: z.string().uuid('El userId debe ser un UUID válido'),
+    observations: z.string().trim().optional(),
+    clientId: z.string().uuid('El clientId debe ser un UUID válido').optional(),
+    clientType: z.nativeEnum(ClientType).optional(),
+    totalWeight: z.number().positive('El peso total debe ser positivo').optional(),
+    returnCause: z.string().trim().optional(),
+    returnDescription: z.string().trim().optional(),
+  })
+  .refine(
+    (data) =>
+      ADJUSTMENT_TYPES.includes(data.type) ? !!data.sourceMovementId : !!data.productId,
+    (data) =>
+      ADJUSTMENT_TYPES.includes(data.type)
+        ? { message: 'sourceMovementId es requerido para ajustes de inventario', path: ['sourceMovementId'] }
+        : { message: 'productId es requerido para este tipo de movimiento', path: ['productId'] },
+  );
 
 const annulMovementSchema = z.object({
   reason: z.string().trim().min(5, 'El motivo debe tener al menos 5 caracteres'),
@@ -72,7 +84,20 @@ class MovementService {
   ): Promise<{ movement: Movement; warning: string | null }> {
     const data = createMovementSchema.parse(dto);
 
-    const product = await productRepository.findById(data.productId);
+    if (ADJUSTMENT_TYPES.includes(data.type)) {
+      const sourceMovement = await movementRepository.findById(data.sourceMovementId!);
+      if (!sourceMovement) throw new Error('Movimiento fuente no encontrado');
+      if (sourceMovement.isAnnulled) throw new Error('El movimiento fuente ya fue anulado');
+      if (data.type === MovementType.AJUSTE_INGRESO && sourceMovement.type !== MovementType.ENTRADA) {
+        throw new Error('El ajuste de ingreso requiere un movimiento de tipo ENTRADA como fuente');
+      }
+      if (data.type === MovementType.AJUSTE_SALIDA && sourceMovement.type !== MovementType.VENTA) {
+        throw new Error('El ajuste de salida requiere un movimiento de tipo VENTA como fuente');
+      }
+      data.productId = sourceMovement.productId;
+    }
+
+    const product = await productRepository.findById(data.productId!);
     if (!product) {
       throw new Error('Producto no encontrado o inactivo');
     }

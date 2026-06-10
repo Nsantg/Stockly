@@ -142,6 +142,8 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
         subcategory: { ...sub!, category: cat! } as Product['subcategory'],
         requiresRefrigeration: form.requiresRefrigeration,
         stock: Number(form.stock),
+        stockBodega: responseData.stockBodega ?? (isNew ? Number(form.stock) : product?.stockBodega ?? 0),
+        stockVitrina: responseData.stockVitrina ?? (isNew ? 0 : product?.stockVitrina ?? 0),
         minStock: Number(form.minStock),
         isActive: true,
       };

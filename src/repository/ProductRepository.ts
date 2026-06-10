@@ -86,20 +86,25 @@ class ProductRepository {
   }
 
   findForAutocomplete(query: string): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
-    return this.getRepo().then((repo) =>
-      repo
+    return this.getRepo().then((repo) => {
+      const qb = repo
         .createQueryBuilder('product')
         .select(['product.id', 'product.code', 'product.name'])
         .where('product.isActive = :isActive', { isActive: true })
         .andWhere('product.deletedAt IS NULL')
-        .andWhere(
+        .orderBy('product.name', 'ASC');
+
+      if (query.trim()) {
+        qb.andWhere(
           '(LOWER(product.code) LIKE LOWER(:q) OR LOWER(product.name) LIKE LOWER(:q))',
           { q: `%${query}%` },
-        )
-        .orderBy('product.name', 'ASC')
-        .limit(10)
-        .getMany(),
-    );
+        ).limit(20);
+      } else {
+        qb.limit(200);
+      }
+
+      return qb.getMany();
+    });
   }
 
   async getTotalStock(): Promise<number> {

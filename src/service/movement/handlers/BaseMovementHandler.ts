@@ -25,8 +25,19 @@ export abstract class BaseMovementHandler implements MovementHandler {
     queryRunner: QueryRunner,
     product: Product,
     delta: number,
+    locationMode: 'bodega' | 'auto' | null = null,
   ): Promise<void> {
     product.stock += delta;
+
+    if (delta > 0 && locationMode === 'bodega') {
+      product.stockBodega += delta;
+    } else if (delta < 0 && locationMode === 'auto') {
+      const qty = Math.abs(delta);
+      const fromVitrina = Math.min(product.stockVitrina, qty);
+      product.stockVitrina -= fromVitrina;
+      product.stockBodega -= qty - fromVitrina;
+    }
+
     await queryRunner.manager.save(Product, product);
   }
 

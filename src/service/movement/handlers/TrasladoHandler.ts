@@ -6,13 +6,23 @@ import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
 
 export class TrasladoHandler extends BaseMovementHandler {
-  async validate(_dto: CreateMovementDto, _product: Product): Promise<void> {}
+  async validate(dto: CreateMovementDto, product: Product): Promise<void> {
+    if (product.stockBodega < dto.quantity) {
+      throw new Error(
+        `Stock insuficiente en bodega para "${product.name}": disponible ${product.stockBodega}, requerido ${dto.quantity}`,
+      );
+    }
+  }
 
   async execute(
     dto: CreateMovementDto,
-    _product: Product,
+    product: Product,
     queryRunner: QueryRunner,
   ): Promise<Movement> {
+    product.stockBodega -= dto.quantity;
+    product.stockVitrina += dto.quantity;
+    await queryRunner.manager.save(Product, product);
+
     return this.persist(
       queryRunner,
       this.buildMovement(dto, {

@@ -161,26 +161,38 @@ describe('Handlers restantes de movimiento', () => {
   describe('TrasladoHandler - CP-14', () => {
     const handler = new TrasladoHandler();
 
-    it('validate no impone restricciones adicionales', async () => {
+    it('validate permite traslado cuando hay stock suficiente en bodega', async () => {
       const dto = buildMovementDto({ type: MovementType.TRASLADO, quantity: 10 });
+      const product = buildProduct({ stock: 45, stockBodega: 45, stockVitrina: 0 });
 
-      await expect(handler.validate(dto, buildProduct())).resolves.toBeUndefined();
+      await expect(handler.validate(dto, product)).resolves.toBeUndefined();
     });
 
-    it('execute registra traslado sin descontar stock total', async () => {
+    it('validate rechaza traslado si el stock en bodega es insuficiente', async () => {
+      const dto = buildMovementDto({ type: MovementType.TRASLADO, quantity: 20 });
+      const product = buildProduct({ stock: 45, stockBodega: 5, stockVitrina: 40, name: 'PROD-001' });
+
+      await expect(handler.validate(dto, product)).rejects.toThrow(
+        'Stock insuficiente en bodega para "PROD-001": disponible 5, requerido 20',
+      );
+    });
+
+    it('execute mueve stock de bodega a vitrina sin cambiar el total', async () => {
       const dto = buildMovementDto({
         type: MovementType.TRASLADO,
         quantity: 10,
         clientId: undefined,
         clientType: undefined,
       });
-      const product = buildProduct({ stock: 45 });
+      const product = buildProduct({ stock: 45, stockBodega: 45, stockVitrina: 0 });
       const queryRunner = createMockQueryRunner();
 
       const movement = await handler.execute(dto, product, queryRunner);
 
       expect(product.stock).toBe(45);
-      expect(queryRunner.manager.save).toHaveBeenCalledTimes(1);
+      expect(product.stockBodega).toBe(35);
+      expect(product.stockVitrina).toBe(10);
+      expect(queryRunner.manager.save).toHaveBeenCalledTimes(2);
       expect(movement.sourceLocation).toBe(LocationType.BODEGA);
       expect(movement.targetLocation).toBe(LocationType.VITRINA);
       expect(movement.type).toBe(MovementType.TRASLADO);

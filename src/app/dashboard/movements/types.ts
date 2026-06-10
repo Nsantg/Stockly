@@ -22,6 +22,8 @@ export interface ProductDetail {
   code: string;
   name: string;
   stock: number;
+  stockBodega: number;
+  stockVitrina: number;
   allowsSerialNumber: boolean;
 }
 

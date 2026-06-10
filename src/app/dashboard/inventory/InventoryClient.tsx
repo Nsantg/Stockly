@@ -355,7 +355,9 @@ export default function InventoryClient({ rol }: { rol: string }) {
                   <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted">Nombre</th>
                   <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted hidden md:table-cell">Categoría</th>
                   <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted hidden lg:table-cell">Subcategoría</th>
-                  <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted">Stock</th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted">Stock total</th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted hidden sm:table-cell">Bodega</th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted hidden sm:table-cell">Vitrina</th>
                   <th className="text-center py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted hidden sm:table-cell">Refrig.</th>
                   {canWrite && <th className="text-right py-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted">Acciones</th>}
                 </tr>
@@ -373,6 +375,24 @@ export default function InventoryClient({ rol }: { rol: string }) {
                     </td>
                     <td className="py-3 px-3">
                       <StockBadge stock={p.stock} minStock={p.minStock} />
+                    </td>
+                    <td className="py-3 px-3 hidden sm:table-cell">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        (p.stockBodega ?? 0) <= 0
+                          ? 'bg-red-50 text-red-500'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {p.stockBodega ?? 0}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 hidden sm:table-cell">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        (p.stockVitrina ?? 0) <= 0
+                          ? 'bg-subtle text-muted'
+                          : 'bg-brand-50 text-brand-600'
+                      }`}>
+                        {p.stockVitrina ?? 0}
+                      </span>
                     </td>
                     <td className="py-3 px-3 text-center hidden sm:table-cell">
                       {p.requiresRefrigeration ? <IconSnowflake /> : <span className="text-muted">—</span>}

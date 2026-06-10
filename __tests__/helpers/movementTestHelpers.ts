@@ -16,6 +16,8 @@ export function buildProduct(overrides: Partial<Product> & { allowsSerialNumber?
     code: 'PROD-001',
     name: 'Producto de prueba',
     stock: 50,
+    stockBodega: 50,
+    stockVitrina: 0,
     minStock: 10,
     isActive: true,
     subcategory: subcategory ?? {

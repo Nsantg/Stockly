@@ -27,8 +27,6 @@ export abstract class BaseMovementHandler implements MovementHandler {
     delta: number,
     locationMode: 'bodega' | 'auto' | null = null,
   ): Promise<void> {
-    product.stock += delta;
-
     if (delta > 0 && locationMode === 'bodega') {
       product.stockBodega += delta;
     } else if (delta < 0 && locationMode === 'auto') {
@@ -38,6 +36,7 @@ export abstract class BaseMovementHandler implements MovementHandler {
       product.stockBodega -= qty - fromVitrina;
     }
 
+    product.stock = product.stockBodega + product.stockVitrina;
     await queryRunner.manager.save(Product, product);
   }
 

@@ -21,6 +21,7 @@ export class TrasladoHandler extends BaseMovementHandler {
   ): Promise<Movement> {
     product.stockBodega -= dto.quantity;
     product.stockVitrina += dto.quantity;
+    product.stock = product.stockBodega + product.stockVitrina;
     await queryRunner.manager.save(Product, product);
 
     return this.persist(

@@ -150,10 +150,6 @@ class MovementService {
         where: { id: movement.productId },
       });
       if (product) {
-        if (reversalDelta !== 0) {
-          product.stock += reversalDelta;
-        }
-
         const qty = movement.quantity;
         const type = movement.type;
         if (type === MovementType.TRASLADO) {
@@ -166,10 +162,10 @@ class MovementService {
         ) {
           product.stockBodega = Math.max(0, product.stockBodega - qty);
         } else {
-          // VENTA, DAÑO, VENCIMIENTO, AJUSTE_SALIDA — devolver a bodega
           product.stockBodega += qty;
         }
 
+        product.stock = product.stockBodega + product.stockVitrina;
         await queryRunner.manager.save(Product, product);
       }
 
@@ -232,7 +228,6 @@ class MovementService {
           );
         }
         const subDelta = targetQuantity - movement.quantity;
-        product.stock = projected;
         if (subDelta > 0) {
           const fromVitrina = Math.min(product.stockVitrina, subDelta);
           product.stockVitrina -= fromVitrina;
@@ -240,13 +235,15 @@ class MovementService {
         } else if (subDelta < 0) {
           product.stockBodega += Math.abs(subDelta);
         }
+        product.stock = product.stockBodega + product.stockVitrina;
         await queryRunner.manager.save(Product, product);
       } else {
         const oldProduct = await queryRunner.manager.findOne(Product, {
           where: { id: movement.productId },
         });
         if (oldProduct) {
-          oldProduct.stock += movement.quantity;
+          oldProduct.stockBodega += movement.quantity;
+          oldProduct.stock = oldProduct.stockBodega + oldProduct.stockVitrina;
           await queryRunner.manager.save(Product, oldProduct);
         }
         const newProduct = await queryRunner.manager.findOne(Product, {
@@ -260,7 +257,10 @@ class MovementService {
             `Stock insuficiente para "${newProduct.name}": disponible ${newProduct.stock}, requerido ${targetQuantity}`,
           );
         }
-        newProduct.stock -= targetQuantity;
+        const fromVitrina = Math.min(newProduct.stockVitrina, targetQuantity);
+        newProduct.stockVitrina -= fromVitrina;
+        newProduct.stockBodega -= targetQuantity - fromVitrina;
+        newProduct.stock = newProduct.stockBodega + newProduct.stockVitrina;
         await queryRunner.manager.save(Product, newProduct);
       }
 

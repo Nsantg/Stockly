@@ -28,6 +28,8 @@ const createMovementSchema = z
     totalWeight: z.number().positive('El peso total debe ser positivo').optional(),
     returnCause: z.string().trim().optional(),
     returnDescription: z.string().trim().optional(),
+    lotNumber: z.string().trim().optional().nullable(),
+    expirationDate: z.string().optional().nullable(),
   })
   .refine(
     (data) =>

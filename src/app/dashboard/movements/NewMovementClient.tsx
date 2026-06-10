@@ -138,6 +138,19 @@ const EMPTY_FORM: FormState = {
 
 interface ProductOptionLocal { id: string; code: string; name: string; }
 
+interface SourceMovementOption {
+  id: string;
+  date: string;
+  quantity: number;
+  product: { id: string; code: string; name: string; };
+}
+
+const ADJUSTMENT_TYPES: MovementType[] = ['AJUSTE_INGRESO', 'AJUSTE_SALIDA'];
+const SOURCE_TYPE: Record<string, MovementType> = {
+  AJUSTE_INGRESO: 'ENTRADA',
+  AJUSTE_SALIDA: 'VENTA',
+};
+
 function ProductSearch({
   query,
   onQueryChange,
@@ -340,6 +353,142 @@ function ClientSearch({
   );
 }
 
+function MovementSearch({
+  adjustmentType,
+  query,
+  onQueryChange,
+  onSelect,
+  error,
+}: {
+  adjustmentType: MovementType;
+  query: string;
+  onQueryChange: (v: string) => void;
+  onSelect: (m: SourceMovementOption) => void;
+  error?: string;
+}) {
+  const [allMovements, setAllMovements] = useState<SourceMovementOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const loaded = useRef(false);
+
+  const sourceType = SOURCE_TYPE[adjustmentType];
+
+  const load = useCallback(async () => {
+    if (loaded.current) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/v1/movements?type=${sourceType}&isAnnulled=false&limit=50`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const list: SourceMovementOption[] = (data.data ?? []).map(
+          (m: { id: string; date: string; quantity: number; product: { id: string; code: string; name: string } }) => ({
+            id: m.id,
+            date: m.date,
+            quantity: m.quantity,
+            product: m.product,
+          }),
+        );
+        setAllMovements(list);
+        loaded.current = true;
+      }
+    } catch {
+      setAllMovements([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [sourceType]);
+
+  const filtered = query.trim()
+    ? allMovements.filter(
+        (m) =>
+          m.product.name.toLowerCase().includes(query.toLowerCase()) ||
+          m.product.code.toLowerCase().includes(query.toLowerCase()),
+      )
+    : allMovements;
+
+  const handleFocus = () => {
+    setOpen(true);
+    load();
+  };
+
+  return (
+    <div className="relative">
+      <div
+        className={`relative flex items-center border rounded-xl transition-all ${
+          error
+            ? 'border-red-300 ring-2 ring-red-100'
+            : open
+              ? 'ring-2 ring-brand-100 border-brand-400'
+              : 'border-line'
+        }`}
+      >
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { onQueryChange(e.target.value); setOpen(true); }}
+          onFocus={handleFocus}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder={`Buscar movimiento de ${sourceType === 'ENTRADA' ? 'entrada' : 'venta'}…`}
+          className="w-full px-3 py-2.5 pr-8 text-sm bg-transparent focus:outline-none rounded-xl"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { setOpen((p) => !p); if (!loaded.current) load(); }}
+          className="absolute right-2.5 text-muted hover:text-ink transition-colors p-0.5"
+        >
+          <svg
+            width="14" height="14" viewBox="0 0 14 14" fill="none"
+            className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          >
+            <path d="M2.5 5l4.5 4.5L11.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute z-20 top-full mt-1.5 w-full bg-white border border-line rounded-xl shadow-card overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted">
+              <svg className="animate-spin w-4 h-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              Cargando movimientos…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-5 text-center text-sm text-muted">No se encontraron movimientos</div>
+          ) : (
+            <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
+              {filtered.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onMouseDown={() => { onSelect(m); onQueryChange(m.product.name); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-subtle text-left transition-colors border-b border-line/40 last:border-b-0"
+                >
+                  <span className="text-xs font-mono bg-subtle px-1.5 py-0.5 rounded text-muted shrink-0 leading-none">
+                    {m.product.code}
+                  </span>
+                  <span className="flex-1 text-sm text-ink truncate">{m.product.name}</span>
+                  <span className="text-xs text-muted shrink-0">
+                    {new Date(m.date).toLocaleDateString('es-CO')} · {m.quantity} u.
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -456,6 +605,9 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
   const [productQuery, setProductQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
   const [productError, setProductError] = useState('');
+  const [sourceMovementQuery, setSourceMovementQuery] = useState('');
+  const [selectedSourceMovement, setSelectedSourceMovement] = useState<SourceMovementOption | null>(null);
+  const [sourceMovementError, setSourceMovementError] = useState('');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -495,6 +647,9 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
     setProductQuery('');
     setSelectedProduct(null);
     setProductError('');
+    setSourceMovementQuery('');
+    setSelectedSourceMovement(null);
+    setSourceMovementError('');
     if (!SALIDA_TYPES.includes(type)) setEvidenceFiles([]);
   };
 
@@ -502,7 +657,13 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
     let pErr = '';
     const next: Partial<Record<string, string>> = {};
 
-    if (!selectedProduct) pErr = 'Selecciona un producto';
+    const isAdjustment = selectedType !== null && ADJUSTMENT_TYPES.includes(selectedType);
+
+    if (isAdjustment) {
+      if (!selectedSourceMovement) pErr = 'Selecciona un movimiento fuente';
+    } else {
+      if (!selectedProduct) pErr = 'Selecciona un producto';
+    }
 
     const qty = parseInt(form.quantity, 10);
     if (!form.quantity || isNaN(qty) || qty <= 0) next.quantity = 'Ingresa una cantidad válida';
@@ -517,21 +678,32 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
       }
     }
 
-    if ((selectedType === 'AJUSTE_INGRESO' || selectedType === 'AJUSTE_SALIDA') && !form.motivo.trim()) {
+    if (isAdjustment && !form.motivo.trim()) {
       next.motivo = 'El motivo es requerido';
     }
 
-    setProductError(pErr);
+    if (isAdjustment) {
+      setSourceMovementError(pErr);
+    } else {
+      setProductError(pErr);
+    }
     setErrors(next);
     return !pErr && Object.keys(next).length === 0;
   };
 
   const buildBody = () => {
+    const isAdjustment = selectedType !== null && ADJUSTMENT_TYPES.includes(selectedType);
+
     const body: Record<string, unknown> = {
       type: selectedType,
-      productId: selectedProduct!.id,
       quantity: parseInt(form.quantity, 10),
     };
+
+    if (isAdjustment) {
+      body.sourceMovementId = selectedSourceMovement!.id;
+    } else {
+      body.productId = selectedProduct!.id;
+    }
 
     if (selectedType === 'ENTRADA') {
       const parts = [
@@ -557,7 +729,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
       if (form.returnDescription.trim()) body.returnDescription = form.returnDescription.trim();
     }
 
-    if (selectedType === 'AJUSTE_INGRESO' || selectedType === 'AJUSTE_SALIDA') {
+    if (isAdjustment) {
       body.observations = form.motivo.trim();
     }
 
@@ -597,6 +769,9 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
       setSelectedType(null);
       setProductQuery('');
       setSelectedProduct(null);
+      setSourceMovementQuery('');
+      setSelectedSourceMovement(null);
+      setSourceMovementError('');
       setForm(EMPTY_FORM);
       setErrors({});
       setEvidenceFiles([]);
@@ -640,36 +815,61 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
 
       {selectedType && (
         <div key={selectedType} className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6 space-y-5">
-          <Field label="Producto" required>
-            <ProductSearch
-              query={productQuery}
-              onQueryChange={(v) => { setProductQuery(v); if (!v) setSelectedProduct(null); }}
-              onSelect={handleProductSelect}
-              error={productError}
-            />
-            {selectedProduct && (
-              <div className="grid grid-cols-3 gap-2 mt-0.5">
-                <div className="flex flex-col items-center px-3 py-2.5 bg-subtle rounded-xl">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-0.5">Total</span>
-                  <span className={`text-base font-bold ${selectedProduct.stock <= 0 ? 'text-red-500' : 'text-ink'}`}>
-                    {selectedProduct.stock}
+          {ADJUSTMENT_TYPES.includes(selectedType) ? (
+            <Field label="Movimiento fuente" required>
+              <MovementSearch
+                adjustmentType={selectedType}
+                query={sourceMovementQuery}
+                onQueryChange={(v) => { setSourceMovementQuery(v); if (!v) setSelectedSourceMovement(null); }}
+                onSelect={(m) => { setSelectedSourceMovement(m); setSourceMovementError(''); }}
+                error={sourceMovementError}
+              />
+              {selectedSourceMovement && (
+                <div className="flex items-center gap-3 mt-1 px-3 py-2.5 bg-subtle rounded-xl border border-line">
+                  <span className="text-xs font-mono bg-white px-1.5 py-0.5 rounded border border-line text-muted shrink-0">
+                    {selectedSourceMovement.product.code}
+                  </span>
+                  <span className="flex-1 text-sm text-ink font-medium truncate">
+                    {selectedSourceMovement.product.name}
+                  </span>
+                  <span className="text-xs text-muted shrink-0">
+                    {selectedSourceMovement.quantity} u. · {new Date(selectedSourceMovement.date).toLocaleDateString('es-CO')}
                   </span>
                 </div>
-                <div className="flex flex-col items-center px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-100">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-0.5">Bodega</span>
-                  <span className={`text-base font-bold ${selectedProduct.stockBodega <= 0 ? 'text-red-500' : 'text-amber-700'}`}>
-                    {selectedProduct.stockBodega}
-                  </span>
+              )}
+            </Field>
+          ) : (
+            <Field label="Producto" required>
+              <ProductSearch
+                query={productQuery}
+                onQueryChange={(v) => { setProductQuery(v); if (!v) setSelectedProduct(null); }}
+                onSelect={handleProductSelect}
+                error={productError}
+              />
+              {selectedProduct && (
+                <div className="grid grid-cols-3 gap-2 mt-0.5">
+                  <div className="flex flex-col items-center px-3 py-2.5 bg-subtle rounded-xl">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-0.5">Total</span>
+                    <span className={`text-base font-bold ${selectedProduct.stock <= 0 ? 'text-red-500' : 'text-ink'}`}>
+                      {selectedProduct.stock}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-100">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-0.5">Bodega</span>
+                    <span className={`text-base font-bold ${selectedProduct.stockBodega <= 0 ? 'text-red-500' : 'text-amber-700'}`}>
+                      {selectedProduct.stockBodega}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center px-3 py-2.5 bg-brand-50 rounded-xl border border-brand-100">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-500 mb-0.5">Vitrina</span>
+                    <span className={`text-base font-bold ${selectedProduct.stockVitrina <= 0 ? 'text-muted' : 'text-brand-600'}`}>
+                      {selectedProduct.stockVitrina}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-center px-3 py-2.5 bg-brand-50 rounded-xl border border-brand-100">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-500 mb-0.5">Vitrina</span>
-                  <span className={`text-base font-bold ${selectedProduct.stockVitrina <= 0 ? 'text-muted' : 'text-brand-600'}`}>
-                    {selectedProduct.stockVitrina}
-                  </span>
-                </div>
-              </div>
-            )}
-          </Field>
+              )}
+            </Field>
+          )}
 
           <Field label="Cantidad" required>
             <input

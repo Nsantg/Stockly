@@ -895,6 +895,12 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
                             {mov.returnDescription && <DetailRow label="Descripción" value={mov.returnDescription} />}
                             {mov.sourceLocation && <DetailRow label="Origen" value={mov.sourceLocation} />}
                             {mov.targetLocation && <DetailRow label="Destino" value={mov.targetLocation} />}
+                            {(mov.type === 'AJUSTE_INGRESO' || mov.type === 'AJUSTE_SALIDA') && mov.sourceMovementId && (
+                              <DetailRow
+                                label="Movimiento corregido"
+                                value={<span className="font-mono text-xs">{mov.sourceMovementId}</span>}
+                              />
+                            )}
                             {mov.isAnnulled && (
                               <>
                                 <DetailRow label="Anulado por" value={mov.annulledBy ? `${mov.annulledBy.nombre} ${mov.annulledBy.apellido}` : '—'} />

@@ -51,6 +51,7 @@ export function createMockQueryRunner(): QueryRunner {
         id: 'movement-uuid',
         ...data,
       })),
+      find: jest.fn().mockResolvedValue([]),
     },
   } as unknown as QueryRunner;
 }

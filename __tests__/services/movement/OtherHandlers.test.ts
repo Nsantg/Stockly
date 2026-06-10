@@ -47,6 +47,23 @@ describe('Handlers restantes de movimiento', () => {
       expect(movement.type).toBe(MovementType.ENTRADA);
       expect(movement.quantity).toBe(20);
     });
+
+    it('execute crea un lote cuando se provee lotNumber', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.ENTRADA,
+        quantity: 30,
+        lotNumber: 'LOTE-001',
+        expirationDate: '2027-06-01',
+      });
+      const product = buildProduct({ stock: 20 });
+      const queryRunner = createMockQueryRunner();
+
+      const movement = await handler.execute(dto, product, queryRunner);
+
+      expect(product.stock).toBe(50);
+      expect(queryRunner.manager.save).toHaveBeenCalledTimes(3);
+      expect(movement.type).toBe(MovementType.ENTRADA);
+    });
   });
 
   describe('DanoHandler - CP-12', () => {

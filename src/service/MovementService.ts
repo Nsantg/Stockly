@@ -231,7 +231,15 @@ class MovementService {
             `Stock insuficiente para "${product.name}": disponible ${product.stock}, requerido ${targetQuantity}`,
           );
         }
+        const subDelta = targetQuantity - movement.quantity;
         product.stock = projected;
+        if (subDelta > 0) {
+          const fromVitrina = Math.min(product.stockVitrina, subDelta);
+          product.stockVitrina -= fromVitrina;
+          product.stockBodega -= subDelta - fromVitrina;
+        } else if (subDelta < 0) {
+          product.stockBodega += Math.abs(subDelta);
+        }
         await queryRunner.manager.save(Product, product);
       } else {
         const oldProduct = await queryRunner.manager.findOne(Product, {

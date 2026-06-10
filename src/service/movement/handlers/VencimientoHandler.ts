@@ -14,7 +14,7 @@ export class VencimientoHandler extends BaseMovementHandler {
     product: Product,
     queryRunner: QueryRunner,
   ): Promise<Movement> {
-    await this.applyStockDelta(queryRunner, product, -dto.quantity);
+    await this.applyStockDelta(queryRunner, product, -dto.quantity, 'auto');
     return this.persist(queryRunner, this.buildMovement(dto));
   }
 }

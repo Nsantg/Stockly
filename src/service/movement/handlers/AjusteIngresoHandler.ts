@@ -16,7 +16,7 @@ export class AjusteIngresoHandler extends BaseMovementHandler {
     product: Product,
     queryRunner: QueryRunner,
   ): Promise<Movement> {
-    await this.applyStockDelta(queryRunner, product, dto.quantity);
+    await this.applyStockDelta(queryRunner, product, dto.quantity, 'bodega');
     return this.persist(queryRunner, this.buildMovement(dto));
   }
 }

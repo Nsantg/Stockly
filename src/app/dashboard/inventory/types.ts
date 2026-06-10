@@ -24,6 +24,8 @@ export interface Product {
   subcategory: Subcategory & { category: Category };
   requiresRefrigeration: boolean;
   stock: number;
+  stockBodega: number;
+  stockVitrina: number;
   minStock: number;
   isActive: boolean;
 }

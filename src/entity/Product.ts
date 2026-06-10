@@ -55,6 +55,12 @@ export class Product {
   stock!: number;
 
   @Column({ type: 'integer', default: 0 })
+  stockBodega!: number;
+
+  @Column({ type: 'integer', default: 0 })
+  stockVitrina!: number;
+
+  @Column({ type: 'integer', default: 0 })
   minStock!: number;
 
   @Column({ type: 'boolean', default: true })

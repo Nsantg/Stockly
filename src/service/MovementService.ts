@@ -119,14 +119,31 @@ class MovementService {
     await queryRunner.startTransaction();
 
     try {
-      if (reversalDelta !== 0) {
-        const product = await queryRunner.manager.findOne(Product, {
-          where: { id: movement.productId },
-        });
-        if (product) {
+      const product = await queryRunner.manager.findOne(Product, {
+        where: { id: movement.productId },
+      });
+      if (product) {
+        if (reversalDelta !== 0) {
           product.stock += reversalDelta;
-          await queryRunner.manager.save(Product, product);
         }
+
+        const qty = movement.quantity;
+        const type = movement.type;
+        if (type === MovementType.TRASLADO) {
+          product.stockBodega += qty;
+          product.stockVitrina = Math.max(0, product.stockVitrina - qty);
+        } else if (
+          type === MovementType.ENTRADA ||
+          type === MovementType.DEVOLUCION ||
+          type === MovementType.AJUSTE_INGRESO
+        ) {
+          product.stockBodega = Math.max(0, product.stockBodega - qty);
+        } else {
+          // VENTA, DAÑO, VENCIMIENTO, AJUSTE_SALIDA — devolver a bodega
+          product.stockBodega += qty;
+        }
+
+        await queryRunner.manager.save(Product, product);
       }
 
       movement.isAnnulled = true;

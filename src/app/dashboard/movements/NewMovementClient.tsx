@@ -478,11 +478,13 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
           code: d.code,
           name: d.name,
           stock: d.stock ?? 0,
+          stockBodega: d.stockBodega ?? 0,
+          stockVitrina: d.stockVitrina ?? 0,
           allowsSerialNumber: d.subcategory?.category?.allowsSerialNumber ?? false,
         });
       }
     } catch {
-      setSelectedProduct({ id: p.id, code: p.code, name: p.name, stock: 0, allowsSerialNumber: false });
+      setSelectedProduct({ id: p.id, code: p.code, name: p.name, stock: 0, stockBodega: 0, stockVitrina: 0, allowsSerialNumber: false });
     }
   }, []);
 
@@ -646,11 +648,25 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
               error={productError}
             />
             {selectedProduct && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-subtle rounded-lg">
-                <span className="text-xs text-muted">Stock actual:</span>
-                <span className={`text-xs font-semibold ${selectedProduct.stock <= 0 ? 'text-red-500' : 'text-emerald-700'}`}>
-                  {selectedProduct.stock} unidades
-                </span>
+              <div className="grid grid-cols-3 gap-2 mt-0.5">
+                <div className="flex flex-col items-center px-3 py-2.5 bg-subtle rounded-xl">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-0.5">Total</span>
+                  <span className={`text-base font-bold ${selectedProduct.stock <= 0 ? 'text-red-500' : 'text-ink'}`}>
+                    {selectedProduct.stock}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-100">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-0.5">Bodega</span>
+                  <span className={`text-base font-bold ${selectedProduct.stockBodega <= 0 ? 'text-red-500' : 'text-amber-700'}`}>
+                    {selectedProduct.stockBodega}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center px-3 py-2.5 bg-brand-50 rounded-xl border border-brand-100">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-500 mb-0.5">Vitrina</span>
+                  <span className={`text-base font-bold ${selectedProduct.stockVitrina <= 0 ? 'text-muted' : 'text-brand-600'}`}>
+                    {selectedProduct.stockVitrina}
+                  </span>
+                </div>
               </div>
             )}
           </Field>

@@ -8,6 +8,7 @@ export interface MovementFilters {
   type?: MovementType;
   startDate?: Date;
   endDate?: Date;
+  isAnnulled?: boolean;
   page?: number;
   limit?: number;
 }
@@ -25,7 +26,7 @@ class MovementRepository {
   }
 
   async findAll(filters: MovementFilters = {}): Promise<PaginatedMovements> {
-    const { productId, userId, type, startDate, endDate, page = 1, limit = 20 } = filters;
+    const { productId, userId, type, startDate, endDate, isAnnulled, page = 1, limit = 20 } = filters;
     const repo = await this.getRepo();
 
     const qb = repo
@@ -49,8 +50,15 @@ class MovementRepository {
     if (endDate) {
       qb.andWhere('movement.date <= :endDate', { endDate });
     }
+    if (isAnnulled !== undefined) {
+      qb.andWhere('movement.isAnnulled = :isAnnulled', { isAnnulled });
+    }
 
-    const total = await qb.clone().andWhere('movement.isAnnulled = false').getCount();
+    const total = await (
+      isAnnulled !== undefined
+        ? qb.clone()
+        : qb.clone().andWhere('movement.isAnnulled = false')
+    ).getCount();
 
     const data = await qb
       .orderBy('movement.date', 'DESC')

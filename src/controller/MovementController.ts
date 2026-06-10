@@ -95,12 +95,14 @@ class MovementController {
     try {
       const { searchParams } = new URL(request.url);
       const typeParam = searchParams.get('type');
+      const isAnnulledParam = searchParams.get('isAnnulled');
       const filters = {
         productId: searchParams.get('productId') ?? undefined,
         userId: searchParams.get('userId') ?? undefined,
         type: typeParam ? (typeParam as MovementType) : undefined,
         startDate: parseDate(searchParams.get('startDate')),
         endDate: parseDate(searchParams.get('endDate')),
+        isAnnulled: isAnnulledParam !== null ? isAnnulledParam === 'true' : undefined,
         page: searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : 1,
         limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 20,
       };

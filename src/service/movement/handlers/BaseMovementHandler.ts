@@ -44,10 +44,11 @@ export abstract class BaseMovementHandler implements MovementHandler {
   protected buildMovement(dto: CreateMovementDto, overrides: Partial<Movement> = {}): Movement {
     const movement = new Movement();
     movement.type = dto.type;
-    movement.productId = dto.productId;
+    movement.productId = dto.productId!;
     movement.quantity = dto.quantity;
     movement.userId = dto.userId;
     movement.observations = dto.observations ?? null;
+    movement.sourceMovementId = dto.sourceMovementId ?? null;
     movement.date = new Date();
     Object.assign(movement, overrides);
     return movement;

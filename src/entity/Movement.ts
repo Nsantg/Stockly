@@ -100,6 +100,9 @@ export class Movement {
   @Column({ type: 'json', nullable: true })
   evidenceUrls!: string[] | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  sourceMovementId!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

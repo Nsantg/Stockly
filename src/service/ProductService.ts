@@ -106,7 +106,6 @@ class ProductService {
   }
 
   searchForAutocomplete(query: string): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
-    if (!query || query.trim().length === 0) return Promise.resolve([]);
     return productRepository.findForAutocomplete(query.trim());
   }
 

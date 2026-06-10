@@ -151,52 +151,124 @@ function ProductSearch({
 }) {
   const [results, setResults] = useState<ProductOptionLocal[]>([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
+  const loadedAll = useRef(false);
 
   const doSearch = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); return; }
+    setLoading(true);
     try {
       const res = await fetch(`/api/v1/products/search?q=${encodeURIComponent(q)}`);
-      if (res.ok) setResults(await res.json().then((d) => (Array.isArray(d) ? d : [])));
-    } catch { setResults([]); }
+      if (res.ok) {
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+        if (!q.trim()) loadedAll.current = true;
+      }
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  const handleFocus = () => {
+    setOpen(true);
+    if (!loadedAll.current) doSearch('');
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     onQueryChange(v);
     setOpen(true);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => doSearch(v), 300);
+    timer.current = setTimeout(() => {
+      loadedAll.current = false;
+      doSearch(v);
+    }, 300);
+  };
+
+  const toggleDropdown = () => {
+    if (open) {
+      setOpen(false);
+    } else {
+      setOpen(true);
+      if (!loadedAll.current) doSearch('');
+    }
   };
 
   return (
     <div className="relative">
-      <input
-        type="text"
-        value={query}
-        onChange={handleChange}
-        onFocus={() => query && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Buscar por nombre o código…"
-        className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 transition-all ${
-          error ? 'border-red-300 focus:ring-red-100' : 'border-line focus:ring-brand-100 focus:border-brand-400'
+      <div
+        className={`relative flex items-center border rounded-xl transition-all ${
+          error
+            ? 'border-red-300 ring-2 ring-red-100'
+            : open
+              ? 'ring-2 ring-brand-100 border-brand-400'
+              : 'border-line'
         }`}
-      />
-      {open && results.length > 0 && (
-        <div className="absolute z-20 top-full mt-1 w-full bg-white border border-line rounded-xl shadow-card overflow-hidden">
-          {results.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onMouseDown={() => { onSelect(p); onQueryChange(p.name); setOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-subtle text-left transition-colors"
-            >
-              <span className="text-xs font-mono bg-subtle px-1.5 py-0.5 rounded text-muted shrink-0">{p.code}</span>
-              <span className="text-sm text-ink">{p.name}</span>
-            </button>
-          ))}
+      >
+        <input
+          type="text"
+          value={query}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Buscar o seleccionar producto…"
+          className="w-full px-3 py-2.5 pr-8 text-sm bg-transparent focus:outline-none rounded-xl"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleDropdown}
+          className="absolute right-2.5 text-muted hover:text-ink transition-colors p-0.5"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          >
+            <path d="M2.5 5l4.5 4.5L11.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute z-20 top-full mt-1.5 w-full bg-white border border-line rounded-xl shadow-card overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted">
+              <svg className="animate-spin w-4 h-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              Cargando productos…
+            </div>
+          ) : results.length === 0 ? (
+            <div className="py-5 text-center text-sm text-muted">
+              No se encontraron productos
+            </div>
+          ) : (
+            <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
+              {results.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onMouseDown={() => { onSelect(p); onQueryChange(p.name); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-subtle text-left transition-colors border-b border-line/40 last:border-b-0"
+                >
+                  <span className="text-xs font-mono bg-subtle px-1.5 py-0.5 rounded text-muted shrink-0 leading-none">
+                    {p.code}
+                  </span>
+                  <span className="text-sm text-ink truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );

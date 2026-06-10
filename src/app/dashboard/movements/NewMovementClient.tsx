@@ -120,6 +120,8 @@ interface FormState {
   returnCause: string;
   returnDescription: string;
   motivo: string;
+  lotNumber: string;
+  expirationDate: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -134,6 +136,8 @@ const EMPTY_FORM: FormState = {
   returnCause: '',
   returnDescription: '',
   motivo: '',
+  lotNumber: '',
+  expirationDate: '',
 };
 
 interface ProductOptionLocal { id: string; code: string; name: string; }
@@ -711,6 +715,8 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
         form.observacionSelect || '',
       ].filter(Boolean);
       if (parts.length) body.observations = parts.join(' — ');
+      if (form.lotNumber.trim()) body.lotNumber = form.lotNumber.trim();
+      if (form.expirationDate) body.expirationDate = form.expirationDate;
     }
 
     if (selectedType === 'DAÑO' || selectedType === 'VENCIMIENTO') {
@@ -918,6 +924,28 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
                   ))}
                 </div>
               </Field>
+              <div className="bg-subtle rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted uppercase tracking-wider">Información de lote</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Número de lote">
+                    <input
+                      type="text"
+                      value={form.lotNumber}
+                      onChange={(e) => setField('lotNumber', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition-all bg-white"
+                      placeholder="Ej. LOTE-001"
+                    />
+                  </Field>
+                  <Field label="Fecha de vencimiento">
+                    <input
+                      type="date"
+                      value={form.expirationDate}
+                      onChange={(e) => setField('expirationDate', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition-all bg-white"
+                    />
+                  </Field>
+                </div>
+              </div>
             </>
           )}
 

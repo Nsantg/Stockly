@@ -30,8 +30,9 @@ export class VentaHandler extends BaseMovementHandler {
 
     if (lots.length > 0) {
       const lot = lots[0];
-      lot.stock = Math.max(0, lot.stock - dto.quantity);
-      await queryRunner.manager.save(Lot, lot);
+      await queryRunner.manager.update(Lot, lot.id, {
+        stock: Math.max(0, lot.stock - dto.quantity),
+      });
     }
 
     return this.persist(

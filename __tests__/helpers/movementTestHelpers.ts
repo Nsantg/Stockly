@@ -52,6 +52,8 @@ export function createMockQueryRunner(): QueryRunner {
         ...data,
       })),
       find: jest.fn().mockResolvedValue([]),
+      insert: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({}),
     },
   } as unknown as QueryRunner;
 }

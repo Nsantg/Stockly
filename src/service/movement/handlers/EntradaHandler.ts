@@ -16,12 +16,12 @@ export class EntradaHandler extends BaseMovementHandler {
     await this.applyStockDelta(queryRunner, product, dto.quantity, 'bodega');
 
     if (dto.lotNumber) {
-      const lot = new Lot();
-      lot.lotNumber = dto.lotNumber;
-      lot.expirationDate = dto.expirationDate ? new Date(dto.expirationDate) : null;
-      lot.stock = dto.quantity;
-      lot.productId = product.id;
-      await queryRunner.manager.save(Lot, lot);
+      await queryRunner.manager.insert(Lot, {
+        lotNumber: dto.lotNumber,
+        expirationDate: dto.expirationDate ? new Date(dto.expirationDate) : null,
+        stock: dto.quantity,
+        productId: product.id,
+      });
     }
 
     return this.persist(queryRunner, this.buildMovement(dto));

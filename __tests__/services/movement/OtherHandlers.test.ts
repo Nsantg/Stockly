@@ -61,7 +61,8 @@ describe('Handlers restantes de movimiento', () => {
       const movement = await handler.execute(dto, product, queryRunner);
 
       expect(product.stock).toBe(50);
-      expect(queryRunner.manager.save).toHaveBeenCalledTimes(3);
+      expect(queryRunner.manager.save).toHaveBeenCalledTimes(2);
+      expect(queryRunner.manager.insert).toHaveBeenCalledTimes(1);
       expect(movement.type).toBe(MovementType.ENTRADA);
     });
   });

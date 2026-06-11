@@ -48,12 +48,12 @@ class ProductService {
       ? (data.serialNumber ?? null)
       : null;
 
-    const product = await productRepository.create({
+    return productRepository.insert({
       ...data,
       serialNumber,
+      stockBodega: data.stock,
+      stockVitrina: 0,
     } as Partial<Product>);
-
-    return productRepository.save(product);
   }
 
   getAllProducts(filters: ProductFilters) {
@@ -96,8 +96,7 @@ class ProductService {
         : null;
     }
 
-    Object.assign(product, { ...data, subcategoryId: targetSubcategoryId });
-    return productRepository.save(product);
+    return productRepository.update(id, { ...data, subcategoryId: targetSubcategoryId });
   }
 
   async deleteProduct(id: string): Promise<void> {

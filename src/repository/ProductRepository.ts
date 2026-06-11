@@ -142,12 +142,16 @@ class ProductRepository {
     );
   }
 
-  create(data: Partial<Product>): Promise<Product> {
-    return this.getRepo().then((repo) => repo.create(data) as Product);
+  async insert(data: Partial<Product>): Promise<Product> {
+    const repo = await this.getRepo();
+    const result = await repo.insert(data);
+    return this.findById(result.identifiers[0].id) as Promise<Product>;
   }
 
-  save(product: Product): Promise<Product> {
-    return this.getRepo().then((repo) => repo.save(product));
+  async update(id: string, data: Partial<Product>): Promise<Product> {
+    const repo = await this.getRepo();
+    await repo.update(id, data);
+    return this.findById(id) as Promise<Product>;
   }
 
   async softDelete(id: string): Promise<void> {

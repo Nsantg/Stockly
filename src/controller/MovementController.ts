@@ -333,6 +333,75 @@ class MovementController {
 
   /**
    * @swagger
+   * /api/v1/movements/export:
+   *   get:
+   *     summary: Obtener todos los movimientos para exportación sin paginación
+   *     tags:
+   *       - Movements
+   *     security:
+   *       - cookieAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           $ref: '#/components/schemas/MovementType'
+   *       - in: query
+   *         name: productId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: userId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: startDate
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *       - in: query
+   *         name: endDate
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *       - in: query
+   *         name: isAnnulled
+   *         schema:
+   *           type: boolean
+   *     responses:
+   *       200:
+   *         description: Array completo de movimientos sin paginación
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       500:
+   *         $ref: '#/components/responses/InternalError'
+   */
+  async exportMovements(request: NextRequest): Promise<NextResponse> {
+    const auth = await requireSession();
+    if (!auth.ok) return auth.response;
+
+    try {
+      const { searchParams } = new URL(request.url);
+      const typeParam = searchParams.get('type');
+      const isAnnulledParam = searchParams.get('isAnnulled');
+      const filters = {
+        productId: searchParams.get('productId') ?? undefined,
+        userId: searchParams.get('userId') ?? undefined,
+        type: typeParam ? (typeParam as MovementType) : undefined,
+        startDate: parseDate(searchParams.get('startDate')),
+        endDate: parseDate(searchParams.get('endDate')),
+        isAnnulled: isAnnulledParam !== null ? isAnnulledParam === 'true' : undefined,
+      };
+      const movements = await movementService.getMovementsForExport(filters);
+      return NextResponse.json(movements);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /**
+   * @swagger
    * /api/v1/movements/product/{productId}:
    *   get:
    *     summary: Historial de movimientos de un producto

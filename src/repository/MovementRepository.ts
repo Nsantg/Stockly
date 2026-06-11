@@ -138,6 +138,39 @@ class MovementRepository {
     return parseInt(result?.total ?? '0', 10);
   }
 
+  async findAllForExport(filters: Omit<MovementFilters, 'page' | 'limit'> = {}): Promise<Movement[]> {
+    const { productId, userId, type, startDate, endDate, isAnnulled } = filters;
+    const repo = await this.getRepo();
+
+    const qb = repo
+      .createQueryBuilder('movement')
+      .leftJoinAndSelect('movement.product', 'product')
+      .leftJoinAndSelect('movement.user', 'user')
+      .leftJoinAndSelect('movement.client', 'client')
+      .leftJoinAndSelect('movement.annulledBy', 'annulledBy');
+
+    if (productId) {
+      qb.andWhere('movement.productId = :productId', { productId });
+    }
+    if (userId) {
+      qb.andWhere('movement.userId = :userId', { userId });
+    }
+    if (type) {
+      qb.andWhere('movement.type = :type', { type });
+    }
+    if (startDate) {
+      qb.andWhere('movement.date >= :startDate', { startDate });
+    }
+    if (endDate) {
+      qb.andWhere('movement.date <= :endDate', { endDate });
+    }
+    if (isAnnulled !== undefined) {
+      qb.andWhere('movement.isAnnulled = :isAnnulled', { isAnnulled });
+    }
+
+    return qb.orderBy('movement.date', 'DESC').getMany();
+  }
+
   async save(movement: Movement): Promise<Movement> {
     const repo = await this.getRepo();
     return repo.save(movement);

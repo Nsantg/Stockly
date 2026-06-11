@@ -14,6 +14,7 @@ export interface PaginatedProducts {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 class ProductRepository {
@@ -52,7 +53,7 @@ class ProductRepository {
       .take(limit)
       .getMany();
 
-    return { data, total, page, limit };
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   findById(id: string): Promise<Product | null> {

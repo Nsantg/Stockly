@@ -292,6 +292,10 @@ class MovementService {
     return movementRepository.findAll(filters);
   }
 
+  getMovementsForExport(filters: Omit<MovementFilters, 'page' | 'limit'>): Promise<Movement[]> {
+    return movementRepository.findAllForExport(filters);
+  }
+
   async getMovementById(id: string): Promise<Movement> {
     const movement = await movementRepository.findById(id);
     if (!movement) {

@@ -10,14 +10,14 @@ export const TEST_CLIENT_ID = '99999999-8888-7777-6666-555555555555';
 
 export function buildProduct(overrides: Partial<Product> & { allowsSerialNumber?: boolean } = {}): Product {
   const { allowsSerialNumber = false, subcategory, ...rest } = overrides;
+  const stock = rest.stock ?? 50;
+  const stockVitrina = rest.stockVitrina ?? 0;
+  const stockBodega = rest.stockBodega ?? stock - stockVitrina;
 
   return {
     id: TEST_PRODUCT_ID,
     code: 'PROD-001',
     name: 'Producto de prueba',
-    stock: 50,
-    stockBodega: 50,
-    stockVitrina: 0,
     minStock: 10,
     isActive: true,
     subcategory: subcategory ?? {
@@ -29,6 +29,9 @@ export function buildProduct(overrides: Partial<Product> & { allowsSerialNumber?
       },
     },
     ...rest,
+    stock,
+    stockBodega,
+    stockVitrina,
   } as Product;
 }
 
@@ -51,6 +54,9 @@ export function createMockQueryRunner(): QueryRunner {
         id: 'movement-uuid',
         ...data,
       })),
+      find: jest.fn().mockResolvedValue([]),
+      insert: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({}),
     },
   } as unknown as QueryRunner;
 }

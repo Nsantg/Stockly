@@ -19,6 +19,8 @@ export function buildProduct(options: ProductOptions): Product {
     code: 'PROD-BDD',
     name: options.name,
     stock: options.stock,
+    stockBodega: options.stock,
+    stockVitrina: 0,
     minStock: 10,
     isActive: true,
     subcategory: {

@@ -33,7 +33,8 @@ class MovementRepository {
       .createQueryBuilder('movement')
       .leftJoinAndSelect('movement.product', 'product')
       .leftJoinAndSelect('movement.user', 'user')
-      .leftJoinAndSelect('movement.client', 'client');
+      .leftJoinAndSelect('movement.client', 'client')
+      .leftJoinAndSelect('movement.annulledBy', 'annulledBy');
 
     if (productId) {
       qb.andWhere('movement.productId = :productId', { productId });

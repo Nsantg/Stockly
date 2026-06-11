@@ -115,6 +115,8 @@ export async function seedTestFixtures(
     name: 'Producto Integración',
     subcategoryId: FIXTURE_IDS.subcategoryId,
     stock,
+    stockBodega: stock,
+    stockVitrina: 0,
     minStock: 10,
     requiresRefrigeration: false,
     isActive: true,

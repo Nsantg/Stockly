@@ -26,7 +26,8 @@ export class AjusteSalidaHandler extends BaseMovementHandler {
     });
     if (!freshProduct) throw new Error('Producto no encontrado en la transacción');
 
-    freshProduct.stock += sourceMovement.quantity;
+    freshProduct.stockBodega += sourceMovement.quantity;
+    freshProduct.stock = freshProduct.stockBodega + freshProduct.stockVitrina;
     await queryRunner.manager.save(Product, freshProduct);
 
     this.assertSufficientStock(freshProduct, dto.quantity);
@@ -36,7 +37,10 @@ export class AjusteSalidaHandler extends BaseMovementHandler {
     sourceMovement.annulledById = dto.userId;
     await queryRunner.manager.save(Movement, sourceMovement);
 
-    freshProduct.stock -= dto.quantity;
+    const fromVitrina = Math.min(freshProduct.stockVitrina, dto.quantity);
+    freshProduct.stockVitrina -= fromVitrina;
+    freshProduct.stockBodega -= dto.quantity - fromVitrina;
+    freshProduct.stock = freshProduct.stockBodega + freshProduct.stockVitrina;
     await queryRunner.manager.save(Product, freshProduct);
 
     return this.persist(

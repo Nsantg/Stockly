@@ -54,9 +54,12 @@ defineFeature(feature, (test) => {
 
     (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(product);
     (queryRunner.manager.save as jest.Mock).mockImplementation(
-      async (_entity: unknown, data: Partial<Movement>) => {
+      async (_entity: unknown, data: unknown) => ({ ...(data as object) }),
+    );
+    (queryRunner.manager.update as jest.Mock).mockImplementation(
+      async (_entity: unknown, _id: unknown, data: Partial<Movement>) => {
         Object.assign(existingMovement, data);
-        return { ...existingMovement, id: BDD_MOVEMENT_ID };
+        return {};
       },
     );
     (movementRepository.findById as jest.Mock).mockImplementation(async (id: string) => {
@@ -93,9 +96,10 @@ defineFeature(feature, (test) => {
 
     then('el movimiento permanece en la base de datos', () => {
       expect(movementRepository.findById).toHaveBeenCalled();
-      expect(queryRunner.manager.save).toHaveBeenCalledWith(
+      expect(queryRunner.manager.update).toHaveBeenCalledWith(
         Movement,
-        expect.objectContaining({ id: BDD_MOVEMENT_ID }),
+        BDD_MOVEMENT_ID,
+        expect.objectContaining({ isAnnulled: true }),
       );
       expect(ctx.annulledMovement).not.toBeNull();
       expect(ctx.annulledMovement!.id).toBe(BDD_MOVEMENT_ID);

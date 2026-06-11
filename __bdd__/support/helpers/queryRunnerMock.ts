@@ -15,6 +15,8 @@ export function createQueryRunnerMock(movementId = BDD_MOVEMENT_ID): QueryRunner
         id: movementId,
       })),
       findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      update: jest.fn().mockResolvedValue({}),
     },
   } as unknown as QueryRunner;
 }

@@ -13,6 +13,7 @@ import {
   TYPE_BADGE,
 } from './types';
 import { useToast } from '@/components/ui/Toast';
+import { exportToExcel, exportToPdf } from './exportUtils';
 
 const SALIDA_TYPES: MovementType[] = ['VENTA', 'DAÑO', 'VENCIMIENTO', 'AJUSTE_SALIDA'];
 const EVIDENCE_UPLOAD_ROLES = ['Admin', 'Almacenista', 'Despachador'];
@@ -605,6 +606,98 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
+function ExportButton({
+  filterTypes,
+  filterProductId,
+  filterStart,
+  filterEnd,
+}: {
+  filterTypes: MovementType[];
+  filterProductId: string;
+  filterStart: string;
+  filterEnd: string;
+}) {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const buildParams = () => {
+    const params = new URLSearchParams();
+    if (filterTypes.length === 1) params.set('type', filterTypes[0]);
+    if (filterProductId) params.set('productId', filterProductId);
+    if (filterStart) params.set('startDate', filterStart);
+    if (filterEnd) params.set('endDate', `${filterEnd}T23:59:59`);
+    return params;
+  };
+
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    setIsOpen(false);
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/movements/export?${buildParams()}`);
+      if (!res.ok) throw new Error();
+      const movements: Movement[] = await res.json();
+      if (movements.length === 0) {
+        toast('No hay movimientos para exportar', 'error');
+        return;
+      }
+      if (format === 'excel') {
+        exportToExcel(movements);
+      } else {
+        exportToPdf(movements);
+      }
+    } catch {
+      toast('No se pudo generar el archivo', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => !isLoading && setIsOpen((p) => !p)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+        disabled={isLoading}
+        className="px-4 py-2.5 text-sm font-medium border border-line rounded-xl hover:bg-subtle text-muted transition-colors flex items-center gap-1.5 disabled:opacity-60"
+      >
+        {isLoading ? (
+          <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" strokeDasharray="26" strokeDashoffset="9" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1v8M4 6l3 4 3-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M2 10v1.5A1.5 1.5 0 0 0 3.5 13h7a1.5 1.5 0 0 0 1.5-1.5V10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        )}
+        Exportar
+      </button>
+      {isOpen && (
+        <div className="absolute z-20 top-full mt-1 right-0 bg-white border border-line rounded-xl shadow-card min-w-[160px] animate-fade-in overflow-hidden">
+          <button
+            type="button"
+            onMouseDown={() => handleExport('excel')}
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-subtle text-ink cursor-pointer transition-colors"
+          >
+            <span>📊</span>
+            <span>Excel (.xlsx)</span>
+          </button>
+          <button
+            type="button"
+            onMouseDown={() => handleExport('pdf')}
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-subtle text-ink cursor-pointer transition-colors"
+          >
+            <span>📄</span>
+            <span>PDF (.pdf)</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MovementHistoryClient({ rol }: { rol: string }) {
   const { toast } = useToast();
   const canAnnul = ANNUL_ROLES.includes(rol);
@@ -790,17 +883,12 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
             >
               Limpiar
             </button>
-            <button
-              type="button"
-              onClick={() => toast('Exportación disponible próximamente')}
-              className="px-4 py-2.5 text-sm font-medium border border-line rounded-xl hover:bg-subtle text-muted transition-colors flex items-center gap-1.5"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1v8M4 6l3 4 3-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 10v1.5A1.5 1.5 0 0 0 3.5 13h7a1.5 1.5 0 0 0 1.5-1.5V10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              Exportar
-            </button>
+            <ExportButton
+              filterTypes={filterTypes}
+              filterProductId={filterProductId}
+              filterStart={filterStart}
+              filterEnd={filterEnd}
+            />
           </div>
         </div>
       </div>

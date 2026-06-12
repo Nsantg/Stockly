@@ -681,16 +681,14 @@ function ExportButton({
             onMouseDown={() => handleExport('excel')}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-subtle text-ink cursor-pointer transition-colors"
           >
-            <span>📊</span>
-            <span>Excel (.xlsx)</span>
+            Excel (.xlsx)
           </button>
           <button
             type="button"
             onMouseDown={() => handleExport('pdf')}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-subtle text-ink cursor-pointer transition-colors"
           >
-            <span>📄</span>
-            <span>PDF (.pdf)</span>
+            PDF (.pdf)
           </button>
         </div>
       )}

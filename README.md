@@ -64,3 +64,8 @@ Documentación de pruebas adicionales:
 - `__tests__/TRAZABILIDAD-Y-REPORTES-QA.md` describe trazabilidad y reportes QA.
 - `__tests__/integration/DOCUMENTACION-PRUEBAS-INTEGRACION.md` detalla los escenarios de integración.
 - `__bdd__/DOCUMENTACION-PRUEBAS-BDD.md` detalla el enfoque BDD y cómo ejecutar esas pruebas.
+
+
+## Equipo Nuclear 2026
+
+Derly Elena Quejada Perea, Juan José Quintero, Maria Luisa Londoño Moncada, Nicolás Santiago Carmona, Xiomara Ocampo Hurtado y Juan Manuel Pinzon.

@@ -118,5 +118,22 @@ describe('DevolucionHandler - CP-15 / CP-16 (RN-04)', () => {
 
       expect(movement.returnDescription).toBeNull();
     });
+
+    it('execute directamente con clientId y returnCause undefined debe poner null', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.DEVOLUCION,
+        quantity: 1,
+        clientId: undefined,
+        returnCause: undefined,
+        returnDescription: undefined,
+      });
+      const product = buildProduct({ allowsSerialNumber: true, stock: 10 });
+      const queryRunner = createMockQueryRunner();
+
+      const movement = await handler.execute(dto, product, queryRunner);
+
+      expect(movement.clientId).toBeNull();
+      expect(movement.returnCause).toBeNull();
+    });
   });
 });

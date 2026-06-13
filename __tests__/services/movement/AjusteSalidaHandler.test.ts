@@ -29,12 +29,12 @@ function buildSourceMovement(overrides: Partial<Movement> = {}): Movement {
   } as unknown as Movement;
 }
 
-function buildMockQueryRunner(sourceMovement: Movement, freshProduct: Product): QueryRunner {
+function buildMockQueryRunner(sourceMovement: Movement | null, freshProduct: Product | null): QueryRunner {
   return {
     manager: {
       findOne: jest.fn().mockImplementation(async (entity: unknown) => {
-        if (entity === Movement) return { ...sourceMovement };
-        if (entity === Product) return { ...freshProduct };
+        if (entity === Movement) return sourceMovement ? { ...sourceMovement } : null;
+        if (entity === Product) return freshProduct ? { ...freshProduct } : null;
         return null;
       }),
       save: jest.fn().mockImplementation(async (_entity: unknown, data: unknown) => ({
@@ -118,6 +118,34 @@ describe('AjusteSalidaHandler - CP-18 (RN-06)', () => {
 
       await expect(handler.execute(dto, freshProduct, queryRunner)).rejects.toThrow(
         'Stock insuficiente para "PROD-004": disponible 5, requerido 10',
+      );
+    });
+
+    it('debe lanzar error si no se encuentra el movimiento fuente', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.AJUSTE_SALIDA,
+        quantity: 1,
+        observations: 'Test',
+        sourceMovementId: 'invalid-id',
+      });
+      const queryRunner = buildMockQueryRunner(null, buildProduct());
+
+      await expect(handler.execute(dto, buildProduct(), queryRunner)).rejects.toThrow(
+        'Movimiento fuente no encontrado en la transacción'
+      );
+    });
+
+    it('debe lanzar error si no se encuentra el producto', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.AJUSTE_SALIDA,
+        quantity: 1,
+        observations: 'Test',
+        sourceMovementId: SOURCE_ID,
+      });
+      const queryRunner = buildMockQueryRunner(buildSourceMovement(), null);
+
+      await expect(handler.execute(dto, buildProduct(), queryRunner)).rejects.toThrow(
+        'Producto no encontrado en la transacción'
       );
     });
   });

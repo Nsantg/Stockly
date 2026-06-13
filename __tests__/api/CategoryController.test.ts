@@ -1,21 +1,26 @@
 import { NextRequest } from 'next/server';
 import { categoryController } from '../../src/controller/CategoryController';
 import * as categoryServiceModule from '../../src/service/CategoryService';
+import * as subcategoryServiceModule from '../../src/service/SubcategoryService';
 import * as permissionsModule from '../../src/lib/permissions';
+import { ZodError } from 'zod';
 
 const actualCategoryService = jest.requireActual('../../src/service/CategoryService') as typeof import('../../src/service/CategoryService');
 
 jest.mock('../../src/service/CategoryService');
+jest.mock('../../src/service/SubcategoryService');
 jest.mock('../../src/lib/permissions');
 
 describe('CategoryController', () => {
   let mockCategoryService: jest.Mocked<typeof categoryServiceModule.categoryService>;
+  let mockSubcategoryService: jest.Mocked<typeof subcategoryServiceModule.subcategoryService>;
   let mockRequireSession: jest.Mock;
   let mockRequireRoles: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockCategoryService = categoryServiceModule.categoryService as jest.Mocked<typeof categoryServiceModule.categoryService>;
+    mockSubcategoryService = subcategoryServiceModule.subcategoryService as jest.Mocked<typeof subcategoryServiceModule.subcategoryService>;
     mockRequireSession = permissionsModule.requireSession as jest.Mock;
     mockRequireRoles = permissionsModule.requireRoles as jest.Mock;
   });
@@ -172,6 +177,229 @@ describe('CategoryController', () => {
       expect(response.status).toBe(201);
       const data = await response.json();
       expect(data.requiresRefrigeration).toBe(true);
+    });
+  });
+
+  describe('getById', () => {
+    it('debe retornar la categoría si existe', async () => {
+      mockRequireSession.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.getCategoryById.mockResolvedValue({
+        id: '1',
+        name: 'Electroterapia',
+      } as any);
+
+      const response = await categoryController.getById('1');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.id).toBe('1');
+    });
+
+    it('debe retornar 401 si no hay sesión', async () => {
+      const unauthorizedResponse = new Response(
+        JSON.stringify({ error: 'No autorizado' }),
+        { status: 401 }
+      );
+      mockRequireSession.mockResolvedValue({ ok: false, response: unauthorizedResponse });
+
+      const response = await categoryController.getById('1');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('debe retornar 404 si la categoría no es encontrada', async () => {
+      mockRequireSession.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.getCategoryById.mockRejectedValue(
+        new Error('Categoría no encontrada')
+      );
+
+      const response = await categoryController.getById('999');
+
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Categoría no encontrada');
+    });
+
+    it('debe manejar error genérico', async () => {
+      mockRequireSession.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.getCategoryById.mockRejectedValue(
+        new Error('Database disconnect error')
+      );
+
+      const response = await categoryController.getById('1');
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('update', () => {
+    it('debe actualizar la categoría y retornar 200', async () => {
+      mockRequireRoles.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.updateCategory.mockResolvedValue({
+        id: '1',
+        name: 'Electroterapia Editado',
+      } as any);
+
+      const request = new NextRequest('http://localhost/api/v1/categories/1', {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Electroterapia Editado' }),
+      });
+
+      const response = await categoryController.update('1', request);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.name).toBe('Electroterapia Editado');
+    });
+
+    it('debe retornar 403 si el usuario no tiene permisos', async () => {
+      const forbiddenResponse = new Response(
+        JSON.stringify({ error: 'Acceso prohibido' }),
+        { status: 403 }
+      );
+      mockRequireRoles.mockResolvedValue({ ok: false, response: forbiddenResponse });
+
+      const request = new NextRequest('http://localhost/api/v1/categories/1', {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Electroterapia Editado' }),
+      });
+
+      const response = await categoryController.update('1', request);
+
+      expect(response.status).toBe(403);
+    });
+
+    it('debe retornar 404 si la categoría a actualizar no existe', async () => {
+      mockRequireRoles.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.updateCategory.mockRejectedValue(
+        new Error('Categoría no encontrada')
+      );
+
+      const request = new NextRequest('http://localhost/api/v1/categories/999', {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Electroterapia Editado' }),
+      });
+
+      const response = await categoryController.update('999', request);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('debe retornar 400 ante un error genérico', async () => {
+      mockRequireRoles.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.updateCategory.mockRejectedValue(
+        new Error('Generic Error')
+      );
+
+      const request = new NextRequest('http://localhost/api/v1/categories/1', {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Electroterapia Editado' }),
+      });
+
+      const response = await categoryController.update('1', request);
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('remove', () => {
+    it('debe eliminar la categoría y retornar mensaje de éxito', async () => {
+      mockRequireRoles.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.deleteCategory.mockResolvedValue(undefined);
+
+      const response = await categoryController.remove('1');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toBe('Categoría eliminada correctamente');
+    });
+
+    it('debe retornar 403 si no tiene roles requeridos', async () => {
+      const forbiddenResponse = new Response(
+        JSON.stringify({ error: 'Acceso prohibido' }),
+        { status: 403 }
+      );
+      mockRequireRoles.mockResolvedValue({ ok: false, response: forbiddenResponse });
+
+      const response = await categoryController.remove('1');
+
+      expect(response.status).toBe(403);
+    });
+
+    it('debe retornar 404 si la categoría no es encontrada', async () => {
+      mockRequireRoles.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.deleteCategory.mockRejectedValue(
+        new Error('Categoría no encontrada')
+      );
+
+      const response = await categoryController.remove('999');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('debe retornar 400 ante error de eliminación', async () => {
+      mockRequireRoles.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.deleteCategory.mockRejectedValue(
+        new Error('Fallo al eliminar')
+      );
+
+      const response = await categoryController.remove('1');
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('getSubcategories', () => {
+    it('debe retornar las subcategorías con status 200', async () => {
+      mockRequireSession.mockResolvedValue({ ok: true, response: null });
+      mockSubcategoryService.getSubcategoriesByCategory.mockResolvedValue([
+        { id: 'sub-1', name: 'Subcat 1' },
+      ] as any);
+
+      const response = await categoryController.getSubcategories('cat-1');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toHaveLength(1);
+      expect(data[0].name).toBe('Subcat 1');
+    });
+
+    it('debe retornar 401 si no hay sesión activa', async () => {
+      const unauthorizedResponse = new Response(
+        JSON.stringify({ error: 'No autorizado' }),
+        { status: 401 }
+      );
+      mockRequireSession.mockResolvedValue({ ok: false, response: unauthorizedResponse });
+
+      const response = await categoryController.getSubcategories('cat-1');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('debe manejar errores del servicio de subcategorías', async () => {
+      mockRequireSession.mockResolvedValue({ ok: true, response: null });
+      mockSubcategoryService.getSubcategoriesByCategory.mockRejectedValue(
+        new Error('Service error')
+      );
+
+      const response = await categoryController.getSubcategories('cat-1');
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('handleError 500 branch', () => {
+    it('debe retornar status 500 ante un tipo de error desconocido', async () => {
+      mockRequireSession.mockResolvedValue({ ok: true, response: null });
+      mockCategoryService.getAllCategories.mockRejectedValue(
+        'string error'
+      );
+
+      const response = await categoryController.getAll();
+
+      expect(response.status).toBe(500);
+      const data = await response.json();
+      expect(data.error).toBe('Error interno del servidor');
     });
   });
 });

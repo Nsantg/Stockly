@@ -45,6 +45,7 @@
     "autoprefixer": "^10.4.19",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
+    "inline-assets": "^1.5.1",
     "jest": "^30.4.2",
     "jest-cucumber": "^4.5.0",
     "postcss": "^8.4.39",

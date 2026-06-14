@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { clientRepository } from '../repository/ClientRepository';
 import { Client } from '../entity/Client';
 import { ClientType } from '../entity/ClientType';
+import { BusinessError } from '../lib/errors';
 
 export const createClientSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').trim(),
@@ -24,7 +25,7 @@ class ClientService {
     if (data.email) {
       const emailInUse = await clientRepository.existsByEmail(data.email);
       if (emailInUse) {
-        throw new Error(`El email "${data.email}" ya está registrado`);
+        throw new BusinessError(`El email "${data.email}" ya está registrado`);
       }
     }
 
@@ -39,7 +40,7 @@ class ClientService {
   async getClientById(id: string): Promise<Client> {
     const client = await clientRepository.findById(id);
     if (!client) {
-      throw new Error('Cliente no encontrado');
+      throw new BusinessError('Cliente no encontrado');
     }
     return client;
   }
@@ -51,7 +52,7 @@ class ClientService {
     if (data.email && data.email !== client.email) {
       const emailInUse = await clientRepository.existsByEmail(data.email, id);
       if (emailInUse) {
-        throw new Error(`El email "${data.email}" ya está registrado`);
+        throw new BusinessError(`El email "${data.email}" ya está registrado`);
       }
     }
 

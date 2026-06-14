@@ -7,6 +7,7 @@ import {
   WRITE_ROLES,
   CLIENT_CREATE_ROLES,
 } from '../lib/permissions';
+import { BusinessError } from '../lib/errors';
 
 function handleError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
@@ -15,9 +16,10 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof Error) {
+  if (error instanceof BusinessError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  console.error(error);
   return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
 }
 

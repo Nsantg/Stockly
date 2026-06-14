@@ -9,6 +9,7 @@ import {
 } from '../lib/permissions';
 import { UserRole } from '../entity/UserRole';
 import { MovementType } from '../entity/MovementType';
+import { BusinessError } from '../lib/errors';
 
 const EVIDENCE_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.ALMACENISTA, UserRole.DESPACHADOR];
 
@@ -19,9 +20,10 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof Error) {
+  if (error instanceof BusinessError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  console.error(error);
   return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
 }
 

@@ -3,6 +3,7 @@ import { subcategoryRepository } from '../repository/SubcategoryRepository';
 import { categoryRepository } from '../repository/CategoryRepository';
 import { productRepository } from '../repository/ProductRepository';
 import { Subcategory } from '../entity/Subcategory';
+import { BusinessError } from '../lib/errors';
 
 export const createSubcategorySchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').trim(),
@@ -20,7 +21,7 @@ class SubcategoryService {
 
     const category = await categoryRepository.findById(data.categoryId);
     if (!category) {
-      throw new Error(`Categoría con id "${data.categoryId}" no encontrada`);
+      throw new BusinessError(`Categoría con id "${data.categoryId}" no encontrada`);
     }
 
     const exists = await subcategoryRepository.existsByNameInCategory(
@@ -28,7 +29,7 @@ class SubcategoryService {
       data.categoryId,
     );
     if (exists) {
-      throw new Error(
+      throw new BusinessError(
         `Ya existe una subcategoría con el nombre "${data.name}" en esta categoría`,
       );
     }
@@ -48,7 +49,7 @@ class SubcategoryService {
   async getSubcategoryById(id: string): Promise<Subcategory> {
     const sub = await subcategoryRepository.findById(id);
     if (!sub) {
-      throw new Error(`Subcategoría con id "${id}" no encontrada`);
+      throw new BusinessError(`Subcategoría con id "${id}" no encontrada`);
     }
     return sub;
   }
@@ -62,7 +63,7 @@ class SubcategoryService {
     if (data.categoryId && data.categoryId !== subcategory.categoryId) {
       const category = await categoryRepository.findById(data.categoryId);
       if (!category) {
-        throw new Error(`Categoría con id "${data.categoryId}" no encontrada`);
+        throw new BusinessError(`Categoría con id "${data.categoryId}" no encontrada`);
       }
     }
 
@@ -74,7 +75,7 @@ class SubcategoryService {
         id,
       );
       if (exists) {
-        throw new Error(
+        throw new BusinessError(
           `Ya existe una subcategoría con el nombre "${newName}" en esta categoría`,
         );
       }
@@ -89,7 +90,7 @@ class SubcategoryService {
 
     const products = await productRepository.findBySubcategoryId(id);
     if (products.length > 0) {
-      throw new Error(
+      throw new BusinessError(
         `No se puede eliminar la subcategoría porque tiene ${products.length} producto(s) activo(s)`,
       );
     }

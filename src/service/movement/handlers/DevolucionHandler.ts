@@ -3,19 +3,20 @@ import { Movement } from '../../../entity/Movement';
 import { Product } from '../../../entity/Product';
 import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
+import { BusinessError } from '../../../lib/errors';
 
 export class DevolucionHandler extends BaseMovementHandler {
   async validate(dto: CreateMovementDto, product: Product): Promise<void> {
     if (!product.subcategory?.category?.allowsSerialNumber) {
-      throw new Error(
+      throw new BusinessError(
         'Solo se pueden registrar devoluciones de productos eléctricos (con número de serie habilitado)',
       );
     }
     if (!dto.sourceMovementId) {
-      throw new Error('La devolución requiere una venta de origen (sourceMovementId)');
+      throw new BusinessError('La devolución requiere una venta de origen (sourceMovementId)');
     }
     if (!dto.returnCause) {
-      throw new Error('La devolución requiere la causa (returnCause)');
+      throw new BusinessError('La devolución requiere la causa (returnCause)');
     }
   }
 
@@ -27,10 +28,10 @@ export class DevolucionHandler extends BaseMovementHandler {
     const sourceMovement = await queryRunner.manager.findOne(Movement, {
       where: { id: dto.sourceMovementId! },
     });
-    if (!sourceMovement) throw new Error('Movimiento de venta no encontrado en la transacción');
-    if (sourceMovement.isAnnulled) throw new Error('La venta ya fue anulada');
+    if (!sourceMovement) throw new BusinessError('Movimiento de venta no encontrado en la transacción');
+    if (sourceMovement.isAnnulled) throw new BusinessError('La venta ya fue anulada');
     if (dto.quantity > sourceMovement.quantity) {
-      throw new Error(
+      throw new BusinessError(
         `No se pueden devolver más unidades de las vendidas (máx. ${sourceMovement.quantity})`,
       );
     }
@@ -38,7 +39,7 @@ export class DevolucionHandler extends BaseMovementHandler {
     const freshProduct = await queryRunner.manager.findOne(Product, {
       where: { id: dto.productId! },
     });
-    if (!freshProduct) throw new Error('Producto no encontrado en la transacción');
+    if (!freshProduct) throw new BusinessError('Producto no encontrado en la transacción');
 
     freshProduct.stockBodega += dto.quantity;
     freshProduct.stock = freshProduct.stockBodega + freshProduct.stockVitrina;

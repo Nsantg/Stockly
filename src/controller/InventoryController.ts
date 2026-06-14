@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { inventoryService } from '../service/InventoryService';
+import { BusinessError } from '../lib/errors';
 
 const createProductGuardSchema = z.object({
   code: z.string().min(1, 'El código es requerido'),
@@ -14,9 +15,10 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof Error) {
+  if (error instanceof BusinessError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  console.error(error);
   return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
 }
 

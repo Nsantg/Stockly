@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { productRepository, ProductFilters } from '../repository/ProductRepository';
 import { subcategoryRepository } from '../repository/SubcategoryRepository';
 import { Product } from '../entity/Product';
+import { BusinessError } from '../lib/errors';
 
 export const createProductSchema = z.object({
   code: z.string().min(1, 'El código es requerido').trim(),
@@ -33,15 +34,15 @@ class ProductService {
 
     const codeExists = await productRepository.existsByCode(data.code);
     if (codeExists) {
-      throw new Error(`Ya existe un producto con el código "${data.code}"`);
+      throw new BusinessError(`Ya existe un producto con el código "${data.code}"`);
     }
 
     const subcategory = await subcategoryRepository.findById(data.subcategoryId);
     if (!subcategory) {
-      throw new Error(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
+      throw new BusinessError(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
     }
     if (!subcategory.isActive) {
-      throw new Error('La subcategoría seleccionada no está activa');
+      throw new BusinessError('La subcategoría seleccionada no está activa');
     }
 
     const serialNumber = subcategory.category?.allowsSerialNumber
@@ -63,7 +64,7 @@ class ProductService {
   async getProductById(id: string): Promise<Product> {
     const product = await productRepository.findById(id);
     if (!product) {
-      throw new Error(`Producto con id "${id}" no encontrado`);
+      throw new BusinessError(`Producto con id "${id}" no encontrado`);
     }
     return product;
   }
@@ -75,7 +76,7 @@ class ProductService {
     if (data.code && data.code !== product.code) {
       const codeExists = await productRepository.existsByCode(data.code, id);
       if (codeExists) {
-        throw new Error(`Ya existe un producto con el código "${data.code}"`);
+        throw new BusinessError(`Ya existe un producto con el código "${data.code}"`);
       }
     }
 
@@ -85,7 +86,7 @@ class ProductService {
     if (data.subcategoryId && data.subcategoryId !== product.subcategoryId) {
       const found = await subcategoryRepository.findById(data.subcategoryId);
       if (!found) {
-        throw new Error(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
+        throw new BusinessError(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
       }
       subcategory = found;
     }

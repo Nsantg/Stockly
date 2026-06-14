@@ -4,7 +4,7 @@ const nextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      "script-src 'self' https://unpkg.com",
+      "script-src 'self' 'unsafe-inline' https://unpkg.com",
       "style-src 'self' https://unpkg.com 'unsafe-inline'",
       "img-src 'self' data: https://res.cloudinary.com",
       "font-src 'self'",

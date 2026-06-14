@@ -147,6 +147,7 @@ interface SourceMovementOption {
   date: string;
   quantity: number;
   product: { id: string; code: string; name: string; };
+  clientName?: string | null;
 }
 
 const ADJUSTMENT_TYPES: MovementType[] = ['AJUSTE_INGRESO', 'AJUSTE_SALIDA'];
@@ -161,12 +162,14 @@ function ProductSearch({
   onSelect,
   error,
   onlyAllowsSerialNumber,
+  onlyWithVentas,
 }: {
   query: string;
   onQueryChange: (v: string) => void;
   onSelect: (p: ProductOptionLocal) => void;
   error?: string;
   onlyAllowsSerialNumber?: boolean;
+  onlyWithVentas?: boolean;
 }) {
   const [results, setResults] = useState<ProductOptionLocal[]>([]);
   const [open, setOpen] = useState(false);
@@ -179,6 +182,7 @@ function ProductSearch({
     try {
       const params = new URLSearchParams({ q });
       if (onlyAllowsSerialNumber !== undefined) params.set('allowsSerialNumber', String(onlyAllowsSerialNumber));
+      if (onlyWithVentas) params.set('hasVenta', 'true');
       const res = await fetch(`/api/v1/products/search?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -190,7 +194,7 @@ function ProductSearch({
     } finally {
       setLoading(false);
     }
-  }, [onlyAllowsSerialNumber]);
+  }, [onlyAllowsSerialNumber, onlyWithVentas]);
 
   const handleFocus = () => {
     setOpen(true);
@@ -497,6 +501,148 @@ function MovementSearch({
   );
 }
 
+function VentaSearch({
+  productId,
+  query,
+  onQueryChange,
+  onSelect,
+  error,
+}: {
+  productId: string;
+  query: string;
+  onQueryChange: (v: string) => void;
+  onSelect: (m: SourceMovementOption) => void;
+  error?: string;
+}) {
+  const [allMovements, setAllMovements] = useState<SourceMovementOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const loaded = useRef(false);
+
+  const load = useCallback(async () => {
+    if (loaded.current) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/v1/movements?type=VENTA&productId=${encodeURIComponent(productId)}&isAnnulled=false&limit=50`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const list: SourceMovementOption[] = (data.data ?? []).map(
+          (m: { id: string; date: string; quantity: number; product: { id: string; code: string; name: string }; client?: { name: string } | null }) => ({
+            id: m.id,
+            date: m.date,
+            quantity: m.quantity,
+            product: m.product,
+            clientName: m.client?.name ?? null,
+          }),
+        );
+        setAllMovements(list);
+        loaded.current = true;
+      }
+    } catch {
+      setAllMovements([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    loaded.current = false;
+    setAllMovements([]);
+    setOpen(false);
+  }, [productId]);
+
+  const filtered = query.trim()
+    ? allMovements.filter(
+        (m) =>
+          m.clientName?.toLowerCase().includes(query.toLowerCase()) ||
+          new Date(m.date).toLocaleDateString('es-CO').includes(query),
+      )
+    : allMovements;
+
+  const handleFocus = () => {
+    setOpen(true);
+    load();
+  };
+
+  return (
+    <div className="relative">
+      <div
+        className={`relative flex items-center border rounded-xl transition-all ${
+          error
+            ? 'border-red-300 ring-2 ring-red-100'
+            : open
+              ? 'ring-2 ring-brand-100 border-brand-400'
+              : 'border-line'
+        }`}
+      >
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { onQueryChange(e.target.value); setOpen(true); }}
+          onFocus={handleFocus}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Buscar venta por cliente o fecha…"
+          className="w-full px-3 py-2.5 pr-8 text-sm bg-transparent focus:outline-none rounded-xl"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { setOpen((p) => !p); if (!loaded.current) load(); }}
+          className="absolute right-2.5 text-muted hover:text-ink transition-colors p-0.5"
+        >
+          <svg
+            width="14" height="14" viewBox="0 0 14 14" fill="none"
+            className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          >
+            <path d="M2.5 5l4.5 4.5L11.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute z-20 top-full mt-1.5 w-full bg-white border border-line rounded-xl shadow-card overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted">
+              <svg className="animate-spin w-4 h-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              Cargando ventas…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-5 text-center text-sm text-muted">
+              {allMovements.length === 0 ? 'No hay ventas registradas para este producto' : 'No se encontraron resultados'}
+            </div>
+          ) : (
+            <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
+              {filtered.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onMouseDown={() => { onSelect(m); onQueryChange(m.clientName ?? new Date(m.date).toLocaleDateString('es-CO')); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-subtle text-left transition-colors border-b border-line/40 last:border-b-0"
+                >
+                  <span className="flex-1 text-sm text-ink truncate">
+                    {m.clientName ?? '—'}
+                  </span>
+                  <span className="text-xs text-muted shrink-0">
+                    {new Date(m.date).toLocaleDateString('es-CO')} · {m.quantity} u.
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -629,6 +775,9 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
 
   const handleProductSelect = useCallback(async (p: ProductOptionLocal) => {
     setProductError('');
+    setSelectedSourceMovement(null);
+    setSourceMovementQuery('');
+    setSourceMovementError('');
     try {
       const res = await fetch(`/api/v1/products/${p.id}`);
       if (res.ok) {
@@ -663,51 +812,57 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
 
   const validate = (): boolean => {
     let pErr = '';
+    let sErr = '';
     const next: Partial<Record<string, string>> = {};
 
     const isAdjustment = selectedType !== null && ADJUSTMENT_TYPES.includes(selectedType);
+    const isDevolucion = selectedType === 'DEVOLUCION';
 
     if (isAdjustment) {
-      if (!selectedSourceMovement) pErr = 'Selecciona un movimiento fuente';
+      if (!selectedSourceMovement) sErr = 'Selecciona un movimiento fuente';
+    } else if (isDevolucion) {
+      if (!selectedProduct) {
+        pErr = 'Selecciona un producto';
+      } else if (!selectedProduct.allowsSerialNumber) {
+        pErr = 'Este producto no admite devoluciones';
+      } else if (!selectedSourceMovement) {
+        sErr = 'Selecciona una venta de origen';
+      }
     } else {
       if (!selectedProduct) pErr = 'Selecciona un producto';
     }
 
     const qty = parseInt(form.quantity, 10);
-    if (!form.quantity || isNaN(qty) || qty <= 0) next.quantity = 'Ingresa una cantidad válida';
+    if (!form.quantity || isNaN(qty) || qty <= 0) {
+      next.quantity = 'Ingresa una cantidad válida';
+    } else if (isDevolucion && selectedSourceMovement && qty > selectedSourceMovement.quantity) {
+      next.quantity = `Máximo ${selectedSourceMovement.quantity} unidades`;
+    }
 
     if (selectedType === 'VENTA' && !form.clientId) next.clientQuery = 'Selecciona un cliente';
 
-    if (selectedType === 'DEVOLUCION') {
-      if (!form.clientId) next.clientQuery = 'Selecciona un cliente';
-      if (!form.returnCause.trim()) next.returnCause = 'La causa es requerida';
-      if (selectedProduct && !selectedProduct.allowsSerialNumber) {
-        pErr = 'Este producto no admite devoluciones';
-      }
-    }
+    if (isDevolucion && !form.returnCause.trim()) next.returnCause = 'La causa es requerida';
 
     if (isAdjustment && !form.motivo.trim()) {
       next.motivo = 'El motivo es requerido';
     }
 
-    if (isAdjustment) {
-      setSourceMovementError(pErr);
-    } else {
-      setProductError(pErr);
-    }
+    setProductError(pErr);
+    setSourceMovementError(sErr);
     setErrors(next);
-    return !pErr && Object.keys(next).length === 0;
+    return !pErr && !sErr && Object.keys(next).length === 0;
   };
 
   const buildBody = () => {
     const isAdjustment = selectedType !== null && ADJUSTMENT_TYPES.includes(selectedType);
+    const isDevolucion = selectedType === 'DEVOLUCION';
 
     const body: Record<string, unknown> = {
       type: selectedType,
       quantity: parseInt(form.quantity, 10),
     };
 
-    if (isAdjustment) {
+    if (isAdjustment || isDevolucion) {
       body.sourceMovementId = selectedSourceMovement!.id;
     } else {
       body.productId = selectedProduct!.id;
@@ -733,8 +888,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
       if (form.totalWeight) body.totalWeight = parseFloat(form.totalWeight);
     }
 
-    if (selectedType === 'DEVOLUCION') {
-      body.clientId = form.clientId;
+    if (isDevolucion) {
       body.returnCause = form.returnCause.trim();
       if (form.returnDescription.trim()) body.returnDescription = form.returnDescription.trim();
     }
@@ -848,6 +1002,40 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
                 </div>
               )}
             </Field>
+          ) : selectedType === 'DEVOLUCION' ? (
+            <>
+              <Field label="Producto" required>
+                <ProductSearch
+                  query={productQuery}
+                  onQueryChange={(v) => { setProductQuery(v); if (!v) { setSelectedProduct(null); setSelectedSourceMovement(null); setSourceMovementQuery(''); } }}
+                  onSelect={handleProductSelect}
+                  error={productError}
+                  onlyAllowsSerialNumber={true}
+                  onlyWithVentas={true}
+                />
+              </Field>
+              {selectedProduct && (
+                <Field label="Venta de origen" required>
+                  <VentaSearch
+                    productId={selectedProduct.id}
+                    query={sourceMovementQuery}
+                    onQueryChange={(v) => { setSourceMovementQuery(v); if (!v) setSelectedSourceMovement(null); }}
+                    onSelect={(m) => { setSelectedSourceMovement(m); setSourceMovementError(''); }}
+                    error={sourceMovementError}
+                  />
+                  {selectedSourceMovement && (
+                    <div className="flex items-center gap-3 mt-1 px-3 py-2.5 bg-purple-50 rounded-xl border border-purple-100">
+                      <span className="flex-1 text-sm text-ink font-medium truncate">
+                        {selectedSourceMovement.clientName ?? '—'}
+                      </span>
+                      <span className="text-xs text-muted shrink-0">
+                        {new Date(selectedSourceMovement.date).toLocaleDateString('es-CO')} · {selectedSourceMovement.quantity} u. vendidas
+                      </span>
+                    </div>
+                  )}
+                </Field>
+              )}
+            </>
           ) : (
             <Field label="Producto" required>
               <ProductSearch
@@ -855,7 +1043,6 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
                 onQueryChange={(v) => { setProductQuery(v); if (!v) setSelectedProduct(null); }}
                 onSelect={handleProductSelect}
                 error={productError}
-                onlyAllowsSerialNumber={selectedType === 'DEVOLUCION' ? true : undefined}
               />
               {selectedProduct && (
                 <div className="grid grid-cols-3 gap-2 mt-0.5">
@@ -1015,14 +1202,6 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
 
           {selectedType === 'DEVOLUCION' && (
             <>
-              <Field label="Cliente" required>
-                <ClientSearch
-                  query={form.clientQuery}
-                  onQueryChange={(v) => { setField('clientQuery', v); if (!v) setField('clientId', ''); }}
-                  onSelect={(c) => { setField('clientId', c.id); setField('clientQuery', c.name); setErrors((p) => ({ ...p, clientQuery: undefined })); }}
-                  error={errors.clientQuery}
-                />
-              </Field>
               <Field label="Causa" required>
                 <input
                   type="text"

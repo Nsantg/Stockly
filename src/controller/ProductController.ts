@@ -171,7 +171,8 @@ class ProductController {
       const q = searchParams.get('q') ?? '';
       const asnParam = searchParams.get('allowsSerialNumber');
       const allowsSerialNumber = asnParam === 'true' ? true : asnParam === 'false' ? false : undefined;
-      const results = await productService.searchForAutocomplete(q, allowsSerialNumber);
+      const onlyWithVentas = searchParams.get('hasVenta') === 'true' ? true : undefined;
+      const results = await productService.searchForAutocomplete(q, allowsSerialNumber, onlyWithVentas);
       return NextResponse.json(results);
     } catch (error) {
       return handleError(error);

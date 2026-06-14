@@ -86,7 +86,11 @@ class ProductRepository {
     return (await qb.getCount()) > 0;
   }
 
-  findForAutocomplete(query: string, allowsSerialNumber?: boolean): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
+  findForAutocomplete(
+    query: string,
+    allowsSerialNumber?: boolean,
+    onlyWithVentas?: boolean,
+  ): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
     return this.getRepo().then((repo) => {
       const qb = repo
         .createQueryBuilder('product')
@@ -99,6 +103,12 @@ class ProductRepository {
         qb.leftJoin('product.subcategory', 'subcategory')
           .leftJoin('subcategory.category', 'category')
           .andWhere('category.allowsSerialNumber = :allowsSerialNumber', { allowsSerialNumber });
+      }
+
+      if (onlyWithVentas) {
+        qb.andWhere(
+          `EXISTS (SELECT 1 FROM movements m WHERE m."productId" = product.id AND m.type = 'VENTA' AND m."isAnnulled" = false)`,
+        );
       }
 
       if (query.trim()) {

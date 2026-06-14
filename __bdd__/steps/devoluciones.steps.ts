@@ -1,10 +1,13 @@
 import path from 'path';
 import { loadFeature, defineFeature } from 'jest-cucumber';
 import { DevolucionHandler } from '@/service/movement/handlers/DevolucionHandler';
+import { MovementType } from '@/entity/MovementType';
 import { createEmptyContext, ScenarioContext } from '../support/context/ScenarioContext';
 import {
   buildElectroterapiaProduct,
   buildNonElectricProduct,
+  BDD_CLIENT_ID,
+  BDD_SOURCE_MOVEMENT_ID,
 } from '../support/helpers/productFactory';
 import { buildDevolucionDto } from '../support/helpers/movementDtoFactory';
 import { createQueryRunnerMock } from '../support/helpers/queryRunnerMock';
@@ -28,6 +31,16 @@ defineFeature(feature, (test) => {
       (name, _category, stock) => {
         ctx.product = buildElectroterapiaProduct(name, Number(stock));
         initialStockRef.value = ctx.product.stock;
+
+        (ctx.queryRunner.manager.findOne as jest.Mock)
+          .mockResolvedValueOnce({
+            id: BDD_SOURCE_MOVEMENT_ID,
+            type: MovementType.VENTA,
+            quantity: 5,
+            clientId: BDD_CLIENT_ID,
+            isAnnulled: false,
+          })
+          .mockResolvedValueOnce(ctx.product);
       },
     );
 

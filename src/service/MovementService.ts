@@ -14,6 +14,7 @@ import { MovementFactory } from './movement/MovementFactory';
 import { uploadImage } from '../lib/cloudinary';
 
 const ADJUSTMENT_TYPES: MovementType[] = [MovementType.AJUSTE_INGRESO, MovementType.AJUSTE_SALIDA];
+const NEEDS_SOURCE_MOVEMENT: MovementType[] = [...ADJUSTMENT_TYPES, MovementType.DEVOLUCION];
 
 const createMovementSchema = z
   .object({
@@ -33,10 +34,10 @@ const createMovementSchema = z
   })
   .refine(
     (data) =>
-      ADJUSTMENT_TYPES.includes(data.type) ? !!data.sourceMovementId : !!data.productId,
+      NEEDS_SOURCE_MOVEMENT.includes(data.type) ? !!data.sourceMovementId : !!data.productId,
     (data) =>
-      ADJUSTMENT_TYPES.includes(data.type)
-        ? { message: 'sourceMovementId es requerido para ajustes de inventario', path: ['sourceMovementId'] }
+      NEEDS_SOURCE_MOVEMENT.includes(data.type)
+        ? { message: 'sourceMovementId es requerido para este tipo de movimiento', path: ['sourceMovementId'] }
         : { message: 'productId es requerido para este tipo de movimiento', path: ['productId'] },
   );
 
@@ -86,7 +87,7 @@ class MovementService {
   ): Promise<{ movement: Movement; warning: string | null }> {
     const data = createMovementSchema.parse(dto);
 
-    if (ADJUSTMENT_TYPES.includes(data.type)) {
+    if (NEEDS_SOURCE_MOVEMENT.includes(data.type)) {
       const sourceMovement = await movementRepository.findById(data.sourceMovementId!);
       if (!sourceMovement) throw new Error('Movimiento fuente no encontrado');
       if (sourceMovement.isAnnulled) throw new Error('El movimiento fuente ya fue anulado');
@@ -95,6 +96,9 @@ class MovementService {
       }
       if (data.type === MovementType.AJUSTE_SALIDA && sourceMovement.type !== MovementType.VENTA) {
         throw new Error('El ajuste de salida requiere un movimiento de tipo VENTA como fuente');
+      }
+      if (data.type === MovementType.DEVOLUCION && sourceMovement.type !== MovementType.VENTA) {
+        throw new Error('La devolución requiere un movimiento de tipo VENTA como fuente');
       }
       data.productId = sourceMovement.productId;
     }

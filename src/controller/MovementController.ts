@@ -31,6 +31,21 @@ function isNotFoundError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('no encontrado');
 }
 
+function stripUserPassword(user: Record<string, unknown> | null | undefined) {
+  if (!user) return user;
+  const { password: _p, ...safe } = user;
+  return safe;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeMovement(m: any) {
+  return {
+    ...m,
+    user: stripUserPassword(m.user),
+    annulledBy: stripUserPassword(m.annulledBy),
+  };
+}
+
 function parseDate(value: string | null): Date | undefined {
   if (!value) return undefined;
   const date = new Date(value);
@@ -109,7 +124,7 @@ class MovementController {
         limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 20,
       };
       const result = await movementService.getMovements(filters);
-      return NextResponse.json(result);
+      return NextResponse.json({ ...result, data: result.data.map(sanitizeMovement) });
     } catch (error) {
       return handleError(error);
     }
@@ -167,7 +182,10 @@ class MovementController {
         ...body,
         userId: auth.session.user.id,
       });
-      return NextResponse.json(result, { status: 201 });
+      return NextResponse.json(
+        { movement: sanitizeMovement(result.movement), warning: result.warning },
+        { status: 201 },
+      );
     } catch (error) {
       return handleError(error);
     }
@@ -209,7 +227,7 @@ class MovementController {
 
     try {
       const movement = await movementService.getMovementById(id);
-      return NextResponse.json(movement);
+      return NextResponse.json(sanitizeMovement(movement));
     } catch (error) {
       if (isNotFoundError(error)) {
         return NextResponse.json({ error: (error as Error).message }, { status: 404 });
@@ -268,7 +286,7 @@ class MovementController {
         reason: body?.reason,
         userId: auth.session.user.id,
       });
-      return NextResponse.json(movement);
+      return NextResponse.json(sanitizeMovement(movement));
     } catch (error) {
       if (isNotFoundError(error)) {
         return NextResponse.json({ error: (error as Error).message }, { status: 404 });
@@ -324,7 +342,7 @@ class MovementController {
     try {
       const body = await request.json();
       const movement = await movementService.editDispatch(id, body, auth.session.user.id);
-      return NextResponse.json(movement);
+      return NextResponse.json(sanitizeMovement(movement));
     } catch (error) {
       if (isNotFoundError(error)) {
         return NextResponse.json({ error: (error as Error).message }, { status: 404 });
@@ -396,7 +414,7 @@ class MovementController {
         isAnnulled: isAnnulledParam !== null ? isAnnulledParam === 'true' : undefined,
       };
       const movements = await movementService.getMovementsForExport(filters);
-      return NextResponse.json(movements);
+      return NextResponse.json(movements.map(sanitizeMovement));
     } catch (error) {
       return handleError(error);
     }
@@ -438,7 +456,7 @@ class MovementController {
 
     try {
       const movements = await movementService.getMovementsByProduct(productId);
-      return NextResponse.json(movements);
+      return NextResponse.json(movements.map(sanitizeMovement));
     } catch (error) {
       return handleError(error);
     }
@@ -480,7 +498,7 @@ class MovementController {
 
     try {
       const movements = await movementService.getMovementsByUser(userId);
-      return NextResponse.json(movements);
+      return NextResponse.json(movements.map(sanitizeMovement));
     } catch (error) {
       return handleError(error);
     }
@@ -551,7 +569,7 @@ class MovementController {
 
       const buffer = Buffer.from(await file.arrayBuffer());
       const movement = await movementService.uploadEvidence(id, buffer, file.type);
-      return NextResponse.json(movement);
+      return NextResponse.json(sanitizeMovement(movement));
     } catch (error) {
       if (isNotFoundError(error)) {
         return NextResponse.json({ error: (error as Error).message }, { status: 404 });

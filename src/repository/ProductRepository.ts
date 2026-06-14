@@ -86,7 +86,7 @@ class ProductRepository {
     return (await qb.getCount()) > 0;
   }
 
-  findForAutocomplete(query: string): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
+  findForAutocomplete(query: string, allowsSerialNumber?: boolean): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
     return this.getRepo().then((repo) => {
       const qb = repo
         .createQueryBuilder('product')
@@ -94,6 +94,12 @@ class ProductRepository {
         .where('product.isActive = :isActive', { isActive: true })
         .andWhere('product.deletedAt IS NULL')
         .orderBy('product.name', 'ASC');
+
+      if (allowsSerialNumber !== undefined) {
+        qb.leftJoin('product.subcategory', 'subcategory')
+          .leftJoin('subcategory.category', 'category')
+          .andWhere('category.allowsSerialNumber = :allowsSerialNumber', { allowsSerialNumber });
+      }
 
       if (query.trim()) {
         qb.andWhere(

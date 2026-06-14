@@ -104,8 +104,8 @@ class ProductService {
     await productRepository.softDelete(id);
   }
 
-  searchForAutocomplete(query: string): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
-    return productRepository.findForAutocomplete(query.trim());
+  searchForAutocomplete(query: string, allowsSerialNumber?: boolean): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
+    return productRepository.findForAutocomplete(query.trim(), allowsSerialNumber);
   }
 
   async getInventorySummary(): Promise<InventorySummary> {

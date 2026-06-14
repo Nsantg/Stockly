@@ -160,11 +160,13 @@ function ProductSearch({
   onQueryChange,
   onSelect,
   error,
+  onlyAllowsSerialNumber,
 }: {
   query: string;
   onQueryChange: (v: string) => void;
   onSelect: (p: ProductOptionLocal) => void;
   error?: string;
+  onlyAllowsSerialNumber?: boolean;
 }) {
   const [results, setResults] = useState<ProductOptionLocal[]>([]);
   const [open, setOpen] = useState(false);
@@ -175,7 +177,9 @@ function ProductSearch({
   const doSearch = useCallback(async (q: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/products/search?q=${encodeURIComponent(q)}`);
+      const params = new URLSearchParams({ q });
+      if (onlyAllowsSerialNumber !== undefined) params.set('allowsSerialNumber', String(onlyAllowsSerialNumber));
+      const res = await fetch(`/api/v1/products/search?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setResults(Array.isArray(data) ? data : []);
@@ -186,7 +190,7 @@ function ProductSearch({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onlyAllowsSerialNumber]);
 
   const handleFocus = () => {
     setOpen(true);
@@ -851,6 +855,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
                 onQueryChange={(v) => { setProductQuery(v); if (!v) setSelectedProduct(null); }}
                 onSelect={handleProductSelect}
                 error={productError}
+                onlyAllowsSerialNumber={selectedType === 'DEVOLUCION' ? true : undefined}
               />
               {selectedProduct && (
                 <div className="grid grid-cols-3 gap-2 mt-0.5">

@@ -167,8 +167,11 @@ class ProductController {
     if (!auth.ok) return auth.response;
 
     try {
-      const q = new URL(request.url).searchParams.get('q') ?? '';
-      const results = await productService.searchForAutocomplete(q);
+      const searchParams = new URL(request.url).searchParams;
+      const q = searchParams.get('q') ?? '';
+      const asnParam = searchParams.get('allowsSerialNumber');
+      const allowsSerialNumber = asnParam === 'true' ? true : asnParam === 'false' ? false : undefined;
+      const results = await productService.searchForAutocomplete(q, allowsSerialNumber);
       return NextResponse.json(results);
     } catch (error) {
       return handleError(error);

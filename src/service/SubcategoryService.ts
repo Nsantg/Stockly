@@ -6,7 +6,7 @@ import { Subcategory } from '../entity/Subcategory';
 import { BusinessError } from '../lib/errors';
 
 export const createSubcategorySchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').trim(),
+  name: z.string().min(1, 'El nombre es requerido').max(100).trim(),
   categoryId: z.string().uuid('El categoryId debe ser un UUID válido'),
 });
 

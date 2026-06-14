@@ -6,17 +6,17 @@ import { UserRole } from '../entity/UserRole';
 import { BusinessError } from '../lib/errors';
 
 const createUserSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  apellido: z.string().min(1, 'El apellido es requerido'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  nombre: z.string().min(1, 'El nombre es requerido').max(100),
+  apellido: z.string().min(1, 'El apellido es requerido').max(100),
+  email: z.string().email('Email inválido').max(254),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').max(128),
   rol: z.nativeEnum(UserRole).optional(),
 });
 
 const updateUserSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido').optional(),
-  apellido: z.string().min(1, 'El apellido es requerido').optional(),
-  email: z.string().email('Email inválido').optional(),
+  nombre: z.string().min(1, 'El nombre es requerido').max(100).optional(),
+  apellido: z.string().min(1, 'El apellido es requerido').max(100).optional(),
+  email: z.string().email('Email inválido').max(254).optional(),
   rol: z.nativeEnum(UserRole).optional(),
   isActive: z.boolean().optional(),
 });

@@ -5,12 +5,12 @@ import { ClientType } from '../entity/ClientType';
 import { BusinessError } from '../lib/errors';
 
 export const createClientSchema = z.object({
-  name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').trim(),
+  name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(100).trim(),
   clientType: z.nativeEnum(ClientType),
-  phone: z.string().trim().optional(),
-  address: z.string().trim().optional(),
-  city: z.string().trim().optional(),
-  email: z.string().email('El email no es válido').optional(),
+  phone: z.string().max(50).trim().optional(),
+  address: z.string().max(200).trim().optional(),
+  city: z.string().max(200).trim().optional(),
+  email: z.string().email('El email no es válido').max(254).optional(),
 });
 
 export const updateClientSchema = createClientSchema.partial();

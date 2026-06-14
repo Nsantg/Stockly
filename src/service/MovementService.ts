@@ -24,13 +24,13 @@ const createMovementSchema = z
     sourceMovementId: z.string().uuid('El sourceMovementId debe ser un UUID válido').optional(),
     quantity: z.number().int().positive('La cantidad debe ser un entero positivo'),
     userId: z.string().uuid('El userId debe ser un UUID válido'),
-    observations: z.string().trim().optional(),
+    observations: z.string().max(500).trim().optional(),
     clientId: z.string().uuid('El clientId debe ser un UUID válido').optional(),
     clientType: z.nativeEnum(ClientType).optional(),
     totalWeight: z.number().positive('El peso total debe ser positivo').optional(),
-    returnCause: z.string().trim().optional(),
-    returnDescription: z.string().trim().optional(),
-    lotNumber: z.string().trim().optional().nullable(),
+    returnCause: z.string().max(500).trim().optional(),
+    returnDescription: z.string().max(500).trim().optional(),
+    lotNumber: z.string().max(50).trim().optional().nullable(),
     expirationDate: z.string().optional().nullable(),
   })
   .refine(
@@ -43,7 +43,7 @@ const createMovementSchema = z
   );
 
 const annulMovementSchema = z.object({
-  reason: z.string().trim().min(5, 'El motivo debe tener al menos 5 caracteres'),
+  reason: z.string().trim().min(5, 'El motivo debe tener al menos 5 caracteres').max(500),
   userId: z.string().uuid('El userId debe ser un UUID válido'),
 });
 

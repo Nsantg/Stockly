@@ -5,7 +5,7 @@ import { Category } from '../entity/Category';
 import { BusinessError } from '../lib/errors';
 
 export const createCategorySchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').trim(),
+  name: z.string().min(1, 'El nombre es requerido').max(100).trim(),
   requiresRefrigeration: z.boolean().optional().default(false),
   allowsSerialNumber: z.boolean().optional().default(false),
 });

@@ -5,11 +5,11 @@ import { Product } from '../entity/Product';
 import { BusinessError } from '../lib/errors';
 
 export const createProductSchema = z.object({
-  code: z.string().min(1, 'El código es requerido').trim(),
-  name: z.string().min(1, 'El nombre es requerido').trim(),
+  code: z.string().min(1, 'El código es requerido').max(50).trim(),
+  name: z.string().min(1, 'El nombre es requerido').max(100).trim(),
   subcategoryId: z.string().uuid('El subcategoryId debe ser un UUID válido'),
-  barcode: z.string().trim().optional().nullable(),
-  serialNumber: z.string().trim().optional().nullable(),
+  barcode: z.string().max(50).trim().optional().nullable(),
+  serialNumber: z.string().max(50).trim().optional().nullable(),
   weight: z.number().positive('El peso debe ser un número positivo').optional().nullable(),
   requiresRefrigeration: z.boolean().optional().default(false),
   stock: z.number().int().min(0, 'El stock no puede ser negativo').default(0),

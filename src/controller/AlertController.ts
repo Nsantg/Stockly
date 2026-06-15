@@ -126,7 +126,7 @@ class AlertController {
 
     try {
       const raw = parseInt(new URL(request.url).searchParams.get('days') ?? '30', 10);
-      const days = Number.isNaN(raw) ? 30 : raw;
+      const days = Number.isNaN(raw) ? 30 : Math.min(raw, 90);
       const summary = await alertService.getAllAlerts(days);
       return NextResponse.json(summary);
     } catch (error) {

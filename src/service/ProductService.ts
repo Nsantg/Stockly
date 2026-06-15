@@ -88,6 +88,9 @@ class ProductService {
       if (!found) {
         throw new BusinessError(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
       }
+      if (!found.isActive) {
+        throw new BusinessError('La subcategoría seleccionada no está activa');
+      }
       subcategory = found;
     }
 

@@ -240,11 +240,11 @@ class MovementService {
           where: { id: targetProductId },
         });
         if (!product) {
-          throw new Error('Producto no encontrado');
+          throw new BusinessError('Producto no encontrado');
         }
         const projected = product.stock + movement.quantity - targetQuantity;
         if (projected < 0) {
-          throw new Error(
+          throw new BusinessError(
             `Stock insuficiente para "${product.name}": disponible ${product.stock}, requerido ${targetQuantity}`,
           );
         }
@@ -271,10 +271,10 @@ class MovementService {
           where: { id: targetProductId },
         });
         if (!newProduct) {
-          throw new Error('Producto no encontrado');
+          throw new BusinessError('Producto no encontrado');
         }
         if (newProduct.stock < targetQuantity) {
-          throw new Error(
+          throw new BusinessError(
             `Stock insuficiente para "${newProduct.name}": disponible ${newProduct.stock}, requerido ${targetQuantity}`,
           );
         }

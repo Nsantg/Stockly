@@ -3,19 +3,20 @@ import { z } from 'zod';
 import { userRepository } from '../repository/UserRepository';
 import { User } from '../entity/User';
 import { UserRole } from '../entity/UserRole';
+import { BusinessError } from '../lib/errors';
 
 const createUserSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  apellido: z.string().min(1, 'El apellido es requerido'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  nombre: z.string().min(1, 'El nombre es requerido').max(100),
+  apellido: z.string().min(1, 'El apellido es requerido').max(100),
+  email: z.string().email('Email inválido').max(254),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').max(128),
   rol: z.nativeEnum(UserRole).optional(),
 });
 
 const updateUserSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido').optional(),
-  apellido: z.string().min(1, 'El apellido es requerido').optional(),
-  email: z.string().email('Email inválido').optional(),
+  nombre: z.string().min(1, 'El nombre es requerido').max(100).optional(),
+  apellido: z.string().min(1, 'El apellido es requerido').max(100).optional(),
+  email: z.string().email('Email inválido').max(254).optional(),
   rol: z.nativeEnum(UserRole).optional(),
   isActive: z.boolean().optional(),
 });
@@ -29,7 +30,7 @@ class UserService {
 
     const exists = await userRepository.emailExists(validated.email);
     if (exists) {
-      throw new Error('El email ya está en uso');
+      throw new BusinessError('El email ya está en uso');
     }
 
     const hashedPassword = await bcrypt.hash(validated.password, 12);
@@ -56,7 +57,7 @@ class UserService {
 
   async getUserById(id: string): Promise<User> {
     const user = await userRepository.findById(id);
-    if (!user) throw new Error('Usuario no encontrado');
+    if (!user) throw new BusinessError('Usuario no encontrado');
     return user;
   }
 
@@ -66,7 +67,7 @@ class UserService {
 
     if (validated.email && validated.email !== user.email) {
       const taken = await userRepository.emailExists(validated.email, id);
-      if (taken) throw new Error('El email ya está en uso');
+      if (taken) throw new BusinessError('El email ya está en uso');
     }
 
     Object.assign(user, validated);

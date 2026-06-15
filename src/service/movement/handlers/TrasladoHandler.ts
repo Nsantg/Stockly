@@ -4,11 +4,12 @@ import { Product } from '../../../entity/Product';
 import { LocationType } from '../../../entity/LocationType';
 import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
+import { BusinessError } from '../../../lib/errors';
 
 export class TrasladoHandler extends BaseMovementHandler {
   async validate(dto: CreateMovementDto, product: Product): Promise<void> {
     if (product.stockBodega < dto.quantity) {
-      throw new Error(
+      throw new BusinessError(
         `Stock insuficiente en bodega para "${product.name}": disponible ${product.stockBodega}, requerido ${dto.quantity}`,
       );
     }

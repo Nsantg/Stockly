@@ -3,6 +3,7 @@ import { Movement } from '../../../entity/Movement';
 import { Product } from '../../../entity/Product';
 import type { CreateMovementDto } from '../../MovementService';
 import type { MovementHandler } from '../MovementFactory';
+import { BusinessError } from '../../../lib/errors';
 
 export abstract class BaseMovementHandler implements MovementHandler {
   abstract validate(dto: CreateMovementDto, product: Product): Promise<void>;
@@ -15,7 +16,7 @@ export abstract class BaseMovementHandler implements MovementHandler {
 
   protected assertSufficientStock(product: Product, quantity: number): void {
     if (product.stock < quantity) {
-      throw new Error(
+      throw new BusinessError(
         `Stock insuficiente para "${product.name}": disponible ${product.stock}, requerido ${quantity}`,
       );
     }

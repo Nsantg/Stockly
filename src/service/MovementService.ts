@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getDataSource } from '../lib/database';
+import { BusinessError } from '../lib/errors';
 import { Movement } from '../entity/Movement';
 import { Product } from '../entity/Product';
 import { MovementType } from '../entity/MovementType';
@@ -23,13 +24,13 @@ const createMovementSchema = z
     sourceMovementId: z.string().uuid('El sourceMovementId debe ser un UUID válido').optional(),
     quantity: z.number().int().positive('La cantidad debe ser un entero positivo'),
     userId: z.string().uuid('El userId debe ser un UUID válido'),
-    observations: z.string().trim().optional(),
+    observations: z.string().max(500).trim().optional(),
     clientId: z.string().uuid('El clientId debe ser un UUID válido').optional(),
     clientType: z.nativeEnum(ClientType).optional(),
     totalWeight: z.number().positive('El peso total debe ser positivo').optional(),
-    returnCause: z.string().trim().optional(),
-    returnDescription: z.string().trim().optional(),
-    lotNumber: z.string().trim().optional().nullable(),
+    returnCause: z.string().max(500).trim().optional(),
+    returnDescription: z.string().max(500).trim().optional(),
+    lotNumber: z.string().max(50).trim().optional().nullable(),
     expirationDate: z.string().optional().nullable(),
   })
   .refine(
@@ -42,7 +43,7 @@ const createMovementSchema = z
   );
 
 const annulMovementSchema = z.object({
-  reason: z.string().trim().min(5, 'El motivo debe tener al menos 5 caracteres'),
+  reason: z.string().trim().min(5, 'El motivo debe tener al menos 5 caracteres').max(500),
   userId: z.string().uuid('El userId debe ser un UUID válido'),
 });
 
@@ -89,23 +90,23 @@ class MovementService {
 
     if (NEEDS_SOURCE_MOVEMENT.includes(data.type)) {
       const sourceMovement = await movementRepository.findById(data.sourceMovementId!);
-      if (!sourceMovement) throw new Error('Movimiento fuente no encontrado');
-      if (sourceMovement.isAnnulled) throw new Error('El movimiento fuente ya fue anulado');
+      if (!sourceMovement) throw new BusinessError('Movimiento fuente no encontrado');
+      if (sourceMovement.isAnnulled) throw new BusinessError('El movimiento fuente ya fue anulado');
       if (data.type === MovementType.AJUSTE_INGRESO && sourceMovement.type !== MovementType.ENTRADA) {
-        throw new Error('El ajuste de ingreso requiere un movimiento de tipo ENTRADA como fuente');
+        throw new BusinessError('El ajuste de ingreso requiere un movimiento de tipo ENTRADA como fuente');
       }
       if (data.type === MovementType.AJUSTE_SALIDA && sourceMovement.type !== MovementType.VENTA) {
-        throw new Error('El ajuste de salida requiere un movimiento de tipo VENTA como fuente');
+        throw new BusinessError('El ajuste de salida requiere un movimiento de tipo VENTA como fuente');
       }
       if (data.type === MovementType.DEVOLUCION && sourceMovement.type !== MovementType.VENTA) {
-        throw new Error('La devolución requiere un movimiento de tipo VENTA como fuente');
+        throw new BusinessError('La devolución requiere un movimiento de tipo VENTA como fuente');
       }
       data.productId = sourceMovement.productId;
     }
 
     const product = await productRepository.findById(data.productId!);
     if (!product) {
-      throw new Error('Producto no encontrado o inactivo');
+      throw new BusinessError('Producto no encontrado o inactivo');
     }
 
     const handler = MovementFactory.getHandler(data.type);
@@ -135,10 +136,10 @@ class MovementService {
   async annulMovement(id: string, dto: AnnulMovementDto): Promise<Movement> {
     const movement = await movementRepository.findById(id);
     if (!movement) {
-      throw new Error('Movimiento no encontrado');
+      throw new BusinessError('Movimiento no encontrado');
     }
     if (movement.isAnnulled) {
-      throw new Error('Este movimiento ya fue anulado');
+      throw new BusinessError('Este movimiento ya fue anulado');
     }
 
     const data = annulMovementSchema.parse(dto);
@@ -197,13 +198,13 @@ class MovementService {
   ): Promise<Movement> {
     const movement = await movementRepository.findById(id);
     if (!movement) {
-      throw new Error('Movimiento no encontrado');
+      throw new BusinessError('Movimiento no encontrado');
     }
     if (movement.type !== MovementType.VENTA) {
-      throw new Error('Solo se pueden editar despachos de tipo venta');
+      throw new BusinessError('Solo se pueden editar despachos de tipo venta');
     }
     if (movement.isAnnulled) {
-      throw new Error('No se puede editar un despacho anulado');
+      throw new BusinessError('No se puede editar un despacho anulado');
     }
 
     const data = editDispatchSchema.parse(dto);
@@ -303,7 +304,7 @@ class MovementService {
   async getMovementById(id: string): Promise<Movement> {
     const movement = await movementRepository.findById(id);
     if (!movement) {
-      throw new Error('Movimiento no encontrado');
+      throw new BusinessError('Movimiento no encontrado');
     }
     return movement;
   }
@@ -320,20 +321,20 @@ class MovementService {
     const movement = await this.getMovementById(id);
 
     if (!SALIDA_TYPES.includes(movement.type)) {
-      throw new Error('La evidencia fotográfica solo aplica para movimientos de tipo salida');
+      throw new BusinessError('La evidencia fotográfica solo aplica para movimientos de tipo salida');
     }
 
     if (movement.isAnnulled) {
-      throw new Error('No se puede agregar evidencia a un movimiento anulado');
+      throw new BusinessError('No se puede agregar evidencia a un movimiento anulado');
     }
 
     if (!ALLOWED_MIMETYPES.includes(mimetype)) {
-      throw new Error('Formato de imagen no permitido. Use JPEG, PNG o WebP');
+      throw new BusinessError('Formato de imagen no permitido. Use JPEG, PNG o WebP');
     }
 
     const current = movement.evidenceUrls ?? [];
     if (current.length >= MAX_EVIDENCE_IMAGES) {
-      throw new Error(`No se pueden agregar más de ${MAX_EVIDENCE_IMAGES} imágenes por movimiento`);
+      throw new BusinessError(`No se pueden agregar más de ${MAX_EVIDENCE_IMAGES} imágenes por movimiento`);
     }
 
     const url = await uploadImage(fileBuffer, 'stockly/movements');
@@ -357,7 +358,7 @@ class MovementService {
     const created = this.getShift(createdAt);
     const current = this.getShift(new Date());
     if (created === null || current === null || created !== current) {
-      throw new Error(
+      throw new BusinessError(
         'Solo se puede editar un despacho dentro del mismo turno en que fue registrado',
       );
     }

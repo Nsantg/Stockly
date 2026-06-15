@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { categoryRepository } from '../repository/CategoryRepository';
 import { subcategoryRepository } from '../repository/SubcategoryRepository';
 import { Category } from '../entity/Category';
+import { BusinessError } from '../lib/errors';
 
 export const createCategorySchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').trim(),
+  name: z.string().min(1, 'El nombre es requerido').max(100).trim(),
   requiresRefrigeration: z.boolean().optional().default(false),
   allowsSerialNumber: z.boolean().optional().default(false),
 });
@@ -20,7 +21,7 @@ class CategoryService {
 
     const exists = await categoryRepository.existsByName(data.name);
     if (exists) {
-      throw new Error(`Ya existe una categoría con el nombre "${data.name}"`);
+      throw new BusinessError(`Ya existe una categoría con el nombre "${data.name}"`);
     }
 
     const category = await categoryRepository.create(data as Partial<Category>);
@@ -34,7 +35,7 @@ class CategoryService {
   async getCategoryById(id: string): Promise<Category> {
     const category = await categoryRepository.findById(id);
     if (!category) {
-      throw new Error(`Categoría con id "${id}" no encontrada`);
+      throw new BusinessError(`Categoría con id "${id}" no encontrada`);
     }
     return category;
   }
@@ -46,7 +47,7 @@ class CategoryService {
     if (data.name && data.name !== category.name) {
       const exists = await categoryRepository.existsByName(data.name, id);
       if (exists) {
-        throw new Error(`Ya existe una categoría con el nombre "${data.name}"`);
+        throw new BusinessError(`Ya existe una categoría con el nombre "${data.name}"`);
       }
     }
 
@@ -59,7 +60,7 @@ class CategoryService {
 
     const subcategories = await subcategoryRepository.findByCategoryId(id);
     if (subcategories.length > 0) {
-      throw new Error(
+      throw new BusinessError(
         `No se puede eliminar la categoría porque tiene ${subcategories.length} subcategoría(s) activa(s)`,
       );
     }

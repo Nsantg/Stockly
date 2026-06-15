@@ -97,7 +97,9 @@ class ProductService {
         : null;
     }
 
-    return productRepository.update(id, { ...data, subcategoryId: targetSubcategoryId });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { stock: _stock, ...safeData } = data;
+    return productRepository.update(id, { ...safeData, subcategoryId: targetSubcategoryId });
   }
 
   async deleteProduct(id: string): Promise<void> {

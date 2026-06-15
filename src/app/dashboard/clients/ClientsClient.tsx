@@ -244,7 +244,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
                 </div>
 
                 {canWrite && (
-                  <div className="flex items-center gap-1 pt-2 border-t border-subtle opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 pt-2 border-t border-subtle sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => { setEditingClient(client); setModalOpen(true); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-brand-50 text-muted hover:text-brand-600 transition-colors"

@@ -3,6 +3,8 @@ import { alertService } from '../../service/AlertService';
 import { productRepository } from '../../repository/ProductRepository';
 import type { EntryIssue } from '../../entity/EntryIssue';
 
+const EXPIRATION_THRESHOLD_DAYS = 7;
+
 export async function broadcastSummary(daysAhead = 30): Promise<void> {
   const io = getIO();
   if (!io) return;
@@ -30,6 +32,34 @@ export async function notifyStockChange(productId: string): Promise<void> {
     await broadcastSummary();
   } catch (err) {
     console.error('[alertNotifier] notifyStockChange error:', err);
+  }
+}
+
+export async function notifyExpirationIfNear(
+  productName: string,
+  lotNumber: string | null | undefined,
+  expirationDateStr: string | null | undefined,
+): Promise<void> {
+  const io = getIO();
+  if (!io) return;
+  if (!expirationDateStr) return;
+  try {
+    const expUTC = new Date(expirationDateStr);
+    expUTC.setUTCHours(0, 0, 0, 0);
+    const todayUTC = new Date();
+    todayUTC.setUTCHours(0, 0, 0, 0);
+    const daysUntil = Math.round((expUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysUntil > EXPIRATION_THRESHOLD_DAYS) return;
+    const lotInfo = lotNumber ? ` — Lote ${lotNumber}` : '';
+    const when = daysUntil <= 0 ? 'hoy' : `en ${daysUntil} día${daysUntil === 1 ? '' : 's'}`;
+    io.to('alerts').emit('alerts:toast', {
+      level: 'warning',
+      title: 'Vencimiento próximo',
+      message: `${productName}${lotInfo} vence ${when}`,
+      href: '/dashboard/alerts',
+    });
+  } catch (err) {
+    console.error('[alertNotifier] notifyExpirationIfNear error:', err);
   }
 }
 

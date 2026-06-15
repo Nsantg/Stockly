@@ -127,6 +127,12 @@ class MovementService {
         console.error('[movement] notifyStockChange error:', err),
       );
 
+      if (data.type === MovementType.ENTRADA && data.expirationDate) {
+        alertNotifier.notifyExpirationIfNear(product.name, data.lotNumber, data.expirationDate).catch((err) =>
+          console.error('[movement] notifyExpirationIfNear error:', err),
+        );
+      }
+
       if (data.type === MovementType.ENTRADA && data.observations) {
         const obs = data.observations;
         const issueType = obs.includes('Producto dañado')

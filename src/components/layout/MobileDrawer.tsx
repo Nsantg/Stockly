@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { getNavGroups, rolBadge } from './navConfig';
+import { useAlerts } from '@/components/providers/AlertsSocketProvider';
+import NotificationBell from './NotificationBell';
 
 interface MobileDrawerProps {
   nombre: string;
@@ -17,14 +19,8 @@ export default function MobileDrawer({ nombre, apellido, rol }: MobileDrawerProp
   const pathname = usePathname();
   const badge = rolBadge[rol] ?? rolBadge.Visualizador;
   const groups = getNavGroups(rol);
-  const [criticalCount, setCriticalCount] = useState(0);
-
-  useEffect(() => {
-    fetch('/api/v1/alerts')
-      .then<{ totalCritical: number }>((r) => r.json())
-      .then((data) => setCriticalCount(data.totalCritical ?? 0))
-      .catch(() => {});
-  }, [pathname]);
+  const { summary, entryIssues } = useAlerts();
+  const criticalCount = (summary?.totalCritical ?? 0) + (summary?.totalWarnings ?? 0) + entryIssues.length;
 
   return (
     <>
@@ -147,6 +143,7 @@ export default function MobileDrawer({ nombre, apellido, rol }: MobileDrawerProp
                   {rol}
                 </span>
               </div>
+              <NotificationBell />
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}

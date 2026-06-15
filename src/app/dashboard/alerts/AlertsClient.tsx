@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
+import { useAlerts } from '@/components/providers/AlertsSocketProvider'
 
 interface EntryIssue {
   id: string
@@ -175,6 +176,7 @@ function StockProgressBar({ stock, minStock }: { stock: number; minStock: number
 
 export default function AlertsClient({ userName }: { userName: string }) {
   const { toast } = useToast()
+  const { summary: socketSummary, entryIssues: socketIssues } = useAlerts()
   const [summary, setSummary] = useState<AlertSummary | null>(null)
   const [reloading, setReloading] = useState(false)
   const [expirationDays, setExpirationDays] = useState<ExpirationDays>(30)
@@ -219,6 +221,24 @@ export default function AlertsClient({ userName }: { userName: string }) {
   useEffect(() => {
     loadAll()
   }, [loadAll])
+
+  // Sincronización en tiempo real: solo actualiza una vez que el estado inicial está cargado
+  useEffect(() => {
+    if (!socketSummary || summary === null) return
+    setSummary(socketSummary)
+    setExpAlerts(
+      [...socketSummary.expirationAlerts]
+        .filter((a) => a.daysUntilExpiration <= expirationDays)
+        .sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration),
+    )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketSummary])
+
+  useEffect(() => {
+    if (entryIssues === null) return
+    setEntryIssues(socketIssues as EntryIssue[])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketIssues])
 
   const loadExpiration = useCallback(async (days: ExpirationDays) => {
     setExpLoading(true)

@@ -139,7 +139,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 animate-fade-in-up">
         <div>
           <h2 className="text-xl font-semibold text-ink">Clientes</h2>
           <p className="text-sm text-muted mt-0.5">Gestión de clientes registrados</p>
@@ -147,7 +147,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
         {canCreate && (
           <button
             onClick={() => { setEditingClient(null); setModalOpen(true); }}
-            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors self-start"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1V13M1 7H13" stroke="white" strokeWidth="1.8" strokeLinecap="round" />

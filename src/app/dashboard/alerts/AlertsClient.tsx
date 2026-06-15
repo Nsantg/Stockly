@@ -275,7 +275,7 @@ export default function AlertsClient({ userName }: { userName: string }) {
       {summary === null ? (
         <SummarySkeleton />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard
             label="Críticas totales"
             value={criticalCount}
@@ -450,7 +450,7 @@ export default function AlertsClient({ userName }: { userName: string }) {
               <span className="text-xs text-muted">({expAlerts.length})</span>
             )}
           </div>
-          <div className="flex gap-1 p-1 bg-subtle rounded-xl">
+          <div className="flex gap-1 p-1 bg-subtle rounded-xl self-start sm:self-auto overflow-x-auto">
             {EXPIRATION_DAYS.map((d) => (
               <button
                 key={d}

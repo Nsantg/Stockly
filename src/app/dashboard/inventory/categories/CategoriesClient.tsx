@@ -433,7 +433,7 @@ export default function CategoriesClient({ rol }: { rol: string }) {
                           <span className="text-xs text-muted mr-1">—</span>
                           <span className="text-sm text-ink flex-1">{sub.name}</span>
                           {canWrite && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => setEditingSub({ catId: cat.id, sub })}
                                 className="p-1 rounded hover:bg-brand-50 text-muted hover:text-brand-600 transition-colors"

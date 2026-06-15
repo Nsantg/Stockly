@@ -7,6 +7,7 @@ import { Product } from '../entity/Product';
 import { Lot } from '../entity/Lot';
 import { Client } from '../entity/Client';
 import { Movement } from '../entity/Movement';
+import { EntryIssue } from '../entity/EntryIssue';
 
 const isCliMode = process.env.TYPEORM_CLI === 'true';
 
@@ -21,7 +22,7 @@ export const AppDataSource = new DataSource({
   logging: process.env.NODE_ENV !== 'production',
   entities: isCliMode
     ? ['src/entity/*.ts']
-    : [User, Category, Subcategory, Product, Lot, Client, Movement],
+    : [User, Category, Subcategory, Product, Lot, Client, Movement, EntryIssue],
   migrations: isCliMode ? ['src/migrations/*.ts'] : [],
 });
 

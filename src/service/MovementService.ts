@@ -13,6 +13,7 @@ import {
 import { productRepository } from '../repository/ProductRepository';
 import { MovementFactory } from './movement/MovementFactory';
 import { uploadImage } from '../lib/cloudinary';
+import { entryIssueService } from './EntryIssueService';
 
 const ADJUSTMENT_TYPES: MovementType[] = [MovementType.AJUSTE_INGRESO, MovementType.AJUSTE_SALIDA];
 const NEEDS_SOURCE_MOVEMENT: MovementType[] = [...ADJUSTMENT_TYPES, MovementType.DEVOLUCION];
@@ -120,6 +121,21 @@ class MovementService {
     try {
       const created = await handler.execute(data, product, queryRunner);
       await queryRunner.commitTransaction();
+
+      if (data.type === MovementType.ENTRADA && data.observations) {
+        const obs = data.observations;
+        const issueType = obs.includes('Producto dañado')
+          ? 'DAMAGED'
+          : obs.includes('Cantidad incorrecta')
+            ? 'MISSING'
+            : null;
+        if (issueType) {
+          entryIssueService
+            .create({ movementId: created.id, productId: product.id, productName: product.name, quantity: data.quantity, issueType })
+            .catch((err) => console.error('EntryIssue creation failed:', err));
+        }
+      }
+
       const movement = await this.getMovementById(created.id);
       const warning = product.requiresRefrigeration
         ? 'Este producto requiere refrigeración. Verifique que se mantenga la cadena de frío.'

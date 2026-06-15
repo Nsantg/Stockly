@@ -754,11 +754,15 @@ export default function NewMovementClient({
   initialType,
   initialProductId,
   initialMinStock,
+  initialSourceMovementId,
+  issueId,
 }: {
   rol: string;
   initialType?: MovementType | null;
   initialProductId?: string | null;
   initialMinStock?: number | null;
+  initialSourceMovementId?: string | null;
+  issueId?: string | null;
 }) {
   const { toast } = useToast();
   const allowedTypes = ALL_MOVEMENT_TYPES.filter((t) => TYPE_ROLES[t].includes(rol));
@@ -777,6 +781,20 @@ export default function NewMovementClient({
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+
+  const initialSourceLoadedRef = useRef(false);
+  useEffect(() => {
+    if (initialSourceLoadedRef.current || !initialSourceMovementId) return;
+    initialSourceLoadedRef.current = true;
+    fetch(`/api/v1/movements/${initialSourceMovementId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        setSelectedSourceMovement({ id: d.id, date: d.date, quantity: d.quantity, product: d.product });
+        setSourceMovementQuery(d.product?.name ?? '');
+      })
+      .catch(() => {});
+  }, [initialSourceMovementId]);
 
   const initialLoadedRef = useRef(false);
   useEffect(() => {
@@ -961,6 +979,14 @@ export default function NewMovementClient({
         if (anyFailed) {
           toast('Movimiento registrado pero alguna imagen no pudo subirse', 'error');
         }
+      }
+
+      if (issueId && movementId) {
+        fetch(`/api/v1/entry-issues/${issueId}/resolve`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resolvedByMovementId: movementId }),
+        }).catch(() => {});
       }
 
       toast(`${TYPE_LABELS[selectedType!]} registrada correctamente`);

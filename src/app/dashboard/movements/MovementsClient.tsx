@@ -17,6 +17,8 @@ export default function MovementsClient({ rol }: { rol: string }) {
   const tabParam = searchParams.get('tab');
   const productIdParam = searchParams.get('productId');
   const minStockParam = searchParams.get('minStock');
+  const issueIdParam = searchParams.get('issueId');
+  const sourceMovementIdParam = searchParams.get('sourceMovementId');
   const [activeTab, setActiveTab] = useState<Tab>(
     canRegister && tabParam === 'new' ? 'new' : canRegister ? 'new' : 'history',
   );
@@ -62,6 +64,8 @@ export default function MovementsClient({ rol }: { rol: string }) {
             initialType={typeParam}
             initialProductId={productIdParam}
             initialMinStock={minStockParam ? parseInt(minStockParam, 10) : null}
+            initialSourceMovementId={sourceMovementIdParam}
+            issueId={issueIdParam}
           />
         )}
         {activeTab === 'history' && <MovementHistoryClient rol={rol} />}

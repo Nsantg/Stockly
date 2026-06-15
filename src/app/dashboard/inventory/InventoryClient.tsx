@@ -260,12 +260,12 @@ export default function InventoryClient({ rol }: { rol: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-up">
         <div>
           <h2 className="text-xl font-semibold text-ink">Inventario</h2>
           <p className="text-sm text-muted mt-0.5">Gestión de productos y stock</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-start">
           <Link
             href="/dashboard/inventory/categories"
             className="text-xs font-medium text-brand-500 hover:text-brand-700 transition-colors"

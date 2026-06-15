@@ -749,7 +749,17 @@ function EvidenceMultiZone({
   );
 }
 
-export default function NewMovementClient({ rol, initialType }: { rol: string; initialType?: MovementType | null }) {
+export default function NewMovementClient({
+  rol,
+  initialType,
+  initialProductId,
+  initialMinStock,
+}: {
+  rol: string;
+  initialType?: MovementType | null;
+  initialProductId?: string | null;
+  initialMinStock?: number | null;
+}) {
   const { toast } = useToast();
   const allowedTypes = ALL_MOVEMENT_TYPES.filter((t) => TYPE_ROLES[t].includes(rol));
 
@@ -767,6 +777,29 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+
+  const initialLoadedRef = useRef(false);
+  useEffect(() => {
+    if (initialLoadedRef.current || !initialProductId) return;
+    initialLoadedRef.current = true;
+    fetch(`/api/v1/products/${initialProductId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        setProductQuery(d.name);
+        setSelectedProduct({
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          stock: d.stock ?? 0,
+          stockBodega: d.stockBodega ?? 0,
+          stockVitrina: d.stockVitrina ?? 0,
+          minStock: d.minStock ?? initialMinStock ?? 0,
+          allowsSerialNumber: d.subcategory?.category?.allowsSerialNumber ?? false,
+        });
+      })
+      .catch(() => {});
+  }, [initialProductId, initialMinStock]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -789,11 +822,12 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
           stock: d.stock ?? 0,
           stockBodega: d.stockBodega ?? 0,
           stockVitrina: d.stockVitrina ?? 0,
+          minStock: d.minStock ?? 0,
           allowsSerialNumber: d.subcategory?.category?.allowsSerialNumber ?? false,
         });
       }
     } catch {
-      setSelectedProduct({ id: p.id, code: p.code, name: p.name, stock: 0, stockBodega: 0, stockVitrina: 0, allowsSerialNumber: false });
+      setSelectedProduct({ id: p.id, code: p.code, name: p.name, stock: 0, stockBodega: 0, stockVitrina: 0, minStock: 0, allowsSerialNumber: false });
     }
   }, []);
 
@@ -1045,7 +1079,7 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
                 error={productError}
               />
               {selectedProduct && (
-                <div className="grid grid-cols-3 gap-2 mt-0.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-0.5">
                   <div className="flex flex-col items-center px-3 py-2.5 bg-subtle rounded-xl">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-0.5">Total</span>
                     <span className={`text-base font-bold ${selectedProduct.stock <= 0 ? 'text-red-500' : 'text-ink'}`}>
@@ -1062,6 +1096,12 @@ export default function NewMovementClient({ rol, initialType }: { rol: string; i
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-500 mb-0.5">Vitrina</span>
                     <span className={`text-base font-bold ${selectedProduct.stockVitrina <= 0 ? 'text-muted' : 'text-brand-600'}`}>
                       {selectedProduct.stockVitrina}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center px-3 py-2.5 bg-red-50 rounded-xl border border-red-100">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-red-500 mb-0.5">Mínimo</span>
+                    <span className="text-base font-bold text-red-600">
+                      {selectedProduct.minStock}
                     </span>
                   </div>
                 </div>

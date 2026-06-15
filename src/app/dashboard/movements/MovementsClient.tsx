@@ -15,6 +15,8 @@ export default function MovementsClient({ rol }: { rol: string }) {
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type') as MovementType | null;
   const tabParam = searchParams.get('tab');
+  const productIdParam = searchParams.get('productId');
+  const minStockParam = searchParams.get('minStock');
   const [activeTab, setActiveTab] = useState<Tab>(
     canRegister && tabParam === 'new' ? 'new' : canRegister ? 'new' : 'history',
   );
@@ -54,7 +56,14 @@ export default function MovementsClient({ rol }: { rol: string }) {
       </div>
 
       <div className="animate-fade-in-up" style={{ animationDelay: '90ms' }}>
-        {activeTab === 'new' && canRegister && <NewMovementClient rol={rol} initialType={typeParam} />}
+        {activeTab === 'new' && canRegister && (
+          <NewMovementClient
+            rol={rol}
+            initialType={typeParam}
+            initialProductId={productIdParam}
+            initialMinStock={minStockParam ? parseInt(minStockParam, 10) : null}
+          />
+        )}
         {activeTab === 'history' && <MovementHistoryClient rol={rol} />}
       </div>
     </div>

@@ -326,7 +326,7 @@ export default function AlertsClient({ userName }: { userName: string }) {
                   <StockProgressBar stock={alert.stock} minStock={alert.minStock} />
                 </div>
                 <Link
-                  href={`/dashboard/movements?tab=new&type=ENTRADA&productId=${alert.productId}`}
+                  href={`/dashboard/movements?tab=new&type=ENTRADA&productId=${alert.productId}&minStock=${alert.minStock}`}
                   className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors"
                 >
                   Registrar entrada

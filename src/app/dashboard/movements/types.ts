@@ -24,6 +24,7 @@ export interface ProductDetail {
   stock: number;
   stockBodega: number;
   stockVitrina: number;
+  minStock: number;
   allowsSerialNumber: boolean;
 }
 

@@ -11,6 +11,18 @@ export class Settings {
   @Column({ type: 'integer', default: 7 })
   expirationAlertDays!: number;
 
+  @Column({ type: 'varchar', nullable: true })
+  companyName!: string | null;
+
+  @Column({ type: 'boolean', default: true })
+  notifyStockAlerts!: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  notifyExpirationAlerts!: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  notifyEntryIssueAlerts!: boolean;
+
   @UpdateDateColumn()
   updatedAt!: Date;
 }

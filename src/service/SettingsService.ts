@@ -13,6 +13,10 @@ export const updateSettingsSchema = z.object({
       message: `El intervalo de vencimiento debe ser uno de: ${EXPIRATION_ALERT_DAYS_OPTIONS.join(', ')} días`,
     })
     .optional(),
+  companyName: z.string().trim().max(100).optional().nullable(),
+  notifyStockAlerts: z.boolean().optional(),
+  notifyExpirationAlerts: z.boolean().optional(),
+  notifyEntryIssueAlerts: z.boolean().optional(),
 });
 
 export type UpdateSettingsDto = z.infer<typeof updateSettingsSchema>;

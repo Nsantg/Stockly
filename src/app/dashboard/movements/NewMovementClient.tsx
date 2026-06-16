@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MovementType, ClientType, ProductDetail, ClientOption, TYPE_LABELS, ALL_MOVEMENT_TYPES } from './types';
 import { useToast } from '@/components/ui/Toast';
-import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const SALIDA_TYPES: MovementType[] = ['VENTA', 'DAÑO', 'VENCIMIENTO', 'AJUSTE_SALIDA'];
 const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -643,6 +642,111 @@ function VentaSearch({
   );
 }
 
+const TYPE_BADGE: Record<MovementType, string> = {
+  ENTRADA: 'bg-brand-50 text-brand-500',
+  VENTA: 'bg-emerald-50 text-emerald-700',
+  DAÑO: 'bg-red-50 text-red-600',
+  VENCIMIENTO: 'bg-orange-50 text-orange-600',
+  TRASLADO: 'bg-slate-100 text-slate-600',
+  DEVOLUCION: 'bg-purple-50 text-purple-600',
+  AJUSTE_INGRESO: 'bg-teal-50 text-teal-600',
+  AJUSTE_SALIDA: 'bg-amber-50 text-amber-700',
+};
+
+interface MovementSummaryProps {
+  open: boolean;
+  type: MovementType;
+  productName: string;
+  quantity: string;
+  extra: { label: string; value: string }[];
+  onConfirm: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+function MovementSummaryModal({
+  open,
+  type,
+  productName,
+  quantity,
+  extra,
+  onConfirm,
+  onCancel,
+  saving,
+}: MovementSummaryProps) {
+  if (!open) return null;
+  const isDanger = DESTRUCTIVE.includes(type);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-fade-in-up">
+        <div className="px-6 pt-6 pb-2">
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`p-2.5 rounded-xl ${isDanger ? 'bg-red-50' : 'bg-brand-50'}`}>
+              {isDanger ? (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-red-500">
+                  <path d="M10 3L18 17H2L10 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M10 8.5V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="10" cy="14.5" r="0.75" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-brand-500">
+                  <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M10 9V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="10" cy="7" r="0.75" fill="currentColor" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-ink">¿Confirmar registro?</h3>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${TYPE_BADGE[type]}`}>
+                {TYPE_LABELS[type]}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-subtle rounded-xl p-3 space-y-2 mb-5">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-xs text-muted shrink-0">Producto</span>
+              <span className="text-xs text-ink font-semibold text-right">{productName}</span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-xs text-muted shrink-0">Cantidad</span>
+              <span className="text-xs text-ink font-semibold text-right">{quantity} unidades</span>
+            </div>
+            {extra.map(({ label, value }) => (
+              <div key={label} className="flex items-start justify-between gap-3">
+                <span className="text-xs text-muted shrink-0">{label}</span>
+                <span className="text-xs text-ink font-medium text-right">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3 px-6 pb-6">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="flex-1 py-2.5 text-sm font-medium border border-line rounded-xl hover:bg-subtle transition-colors disabled:opacity-50"
+          >
+            Revisar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={saving}
+            className={`flex-1 py-2.5 text-sm font-medium rounded-xl text-white transition-colors disabled:opacity-60 ${BTN_CLASS[type]}`}
+          >
+            {saving ? 'Registrando…' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -1006,10 +1110,36 @@ export default function NewMovementClient({
     }
   };
 
+  const buildSummaryExtra = (): { label: string; value: string }[] => {
+    const rows: { label: string; value: string }[] = [];
+    if (!selectedType) return rows;
+    if (selectedType === 'ENTRADA') {
+      if (form.proveedor.trim()) rows.push({ label: 'Proveedor', value: form.proveedor.trim() });
+      if (form.observacionSelect) rows.push({ label: 'Observación', value: form.observacionSelect });
+      if (form.lotNumber.trim()) rows.push({ label: 'Lote', value: form.lotNumber.trim() });
+      if (form.expirationDate) rows.push({ label: 'Vencimiento', value: new Date(form.expirationDate + 'T12:00:00').toLocaleDateString('es-CO') });
+    }
+    if (selectedType === 'VENTA') {
+      if (form.clientQuery.trim()) rows.push({ label: 'Cliente', value: form.clientQuery.trim() });
+      rows.push({ label: 'Tipo', value: form.clientType });
+      if (form.totalWeight) rows.push({ label: 'Peso', value: `${form.totalWeight} kg` });
+    }
+    if (selectedType === 'DAÑO' || selectedType === 'VENCIMIENTO') {
+      if (form.observations.trim()) rows.push({ label: 'Observaciones', value: form.observations.trim() });
+    }
+    if (selectedType === 'DEVOLUCION') {
+      rows.push({ label: 'Causa', value: form.returnCause.trim() });
+      if (form.returnDescription.trim()) rows.push({ label: 'Descripción', value: form.returnDescription.trim() });
+    }
+    if (selectedType === 'AJUSTE_INGRESO' || selectedType === 'AJUSTE_SALIDA') {
+      rows.push({ label: 'Motivo', value: form.motivo.trim() });
+    }
+    return rows;
+  };
+
   const handleSubmit = () => {
     if (!selectedType || !validate()) return;
-    if (DESTRUCTIVE.includes(selectedType)) { setConfirmOpen(true); return; }
-    submit();
+    setConfirmOpen(true);
   };
 
   return (
@@ -1338,13 +1468,19 @@ export default function NewMovementClient({
         </div>
       )}
 
-      <ConfirmModal
+      <MovementSummaryModal
         open={confirmOpen}
-        title={`¿Confirmar ${selectedType ? TYPE_LABELS[selectedType].toLowerCase() : ''}?`}
-        description="Esta operación modifica el inventario y puede ser difícil de revertir."
-        confirmLabel="Confirmar"
+        type={selectedType ?? 'ENTRADA'}
+        productName={
+          selectedProduct?.name ??
+          selectedSourceMovement?.product.name ??
+          ''
+        }
+        quantity={form.quantity}
+        extra={buildSummaryExtra()}
         onConfirm={() => { setConfirmOpen(false); submit(); }}
         onCancel={() => setConfirmOpen(false)}
+        saving={saving}
       />
     </div>
   );

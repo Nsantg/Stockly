@@ -29,7 +29,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci || (echo "=== npm debug log ===" && cat ~/.npm/_logs/*.log && exit 1)
+        run: npm ci
 
       - name: Run unit tests
         run: npm test
@@ -76,7 +76,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci || (echo "=== npm debug log ===" && cat ~/.npm/_logs/*.log && exit 1)
+        run: npm ci
 
       - name: Run integration tests
         run: npm run test:integration

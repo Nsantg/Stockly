@@ -78,6 +78,15 @@ function IconAlerts() {
   );
 }
 
+function IconSettings() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 1.5V3.3M8 12.7V14.5M1.5 8H3.3M12.7 8H14.5M3.4 3.4L4.7 4.7M11.3 11.3L12.6 12.6M3.4 12.6L4.7 11.3M11.3 4.7L12.6 3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const baseNavGroups: NavGroup[] = [
   {
     label: 'Principal',
@@ -100,6 +109,7 @@ const adminNavGroup: NavGroup = {
   label: 'Administración',
   items: [
     { label: 'Usuarios', href: '/dashboard/users', icon: IconUsers },
+    { label: 'Configuración', href: '/dashboard/settings', icon: IconSettings },
   ],
 };
 

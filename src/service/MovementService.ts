@@ -14,6 +14,7 @@ import { productRepository } from '../repository/ProductRepository';
 import { MovementFactory } from './movement/MovementFactory';
 import { uploadImage } from '../lib/cloudinary';
 import { entryIssueService } from './EntryIssueService';
+import * as alertNotifier from '../lib/realtime/alertNotifier';
 
 const ADJUSTMENT_TYPES: MovementType[] = [MovementType.AJUSTE_INGRESO, MovementType.AJUSTE_SALIDA];
 const NEEDS_SOURCE_MOVEMENT: MovementType[] = [...ADJUSTMENT_TYPES, MovementType.DEVOLUCION];
@@ -122,6 +123,16 @@ class MovementService {
       const created = await handler.execute(data, product, queryRunner);
       await queryRunner.commitTransaction();
 
+      alertNotifier.notifyStockChange(product.id).catch((err) =>
+        console.error('[movement] notifyStockChange error:', err),
+      );
+
+      if (data.type === MovementType.ENTRADA && data.expirationDate) {
+        alertNotifier.notifyExpirationIfNear(product.name, data.lotNumber, data.expirationDate).catch((err) =>
+          console.error('[movement] notifyExpirationIfNear error:', err),
+        );
+      }
+
       if (data.type === MovementType.ENTRADA && data.observations) {
         const obs = data.observations;
         const issueType = obs.includes('Producto dañado')
@@ -132,6 +143,7 @@ class MovementService {
         if (issueType) {
           entryIssueService
             .create({ movementId: created.id, productId: product.id, productName: product.name, quantity: data.quantity, issueType })
+            .then((issue) => alertNotifier.notifyEntryIssue(issue))
             .catch((err) => console.error('EntryIssue creation failed:', err));
         }
       }
@@ -198,6 +210,9 @@ class MovementService {
       });
 
       await queryRunner.commitTransaction();
+      alertNotifier.notifyStockChange(movement.productId).catch((err) =>
+        console.error('[annul] notifyStockChange error:', err),
+      );
       return this.getMovementById(id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -226,6 +241,7 @@ class MovementService {
     const data = editDispatchSchema.parse(dto);
     this.assertSameShift(movement.date);
 
+    const originalProductId = movement.productId;
     const targetProductId = data.productId ?? movement.productId;
     const targetQuantity = data.quantity ?? movement.quantity;
 
@@ -300,6 +316,14 @@ class MovementService {
       await queryRunner.manager.save(Movement, movement);
 
       await queryRunner.commitTransaction();
+      alertNotifier.notifyStockChange(targetProductId).catch((err) =>
+        console.error('[editDispatch] notifyStockChange (target) error:', err),
+      );
+      if (originalProductId !== targetProductId) {
+        alertNotifier.notifyStockChange(originalProductId).catch((err) =>
+          console.error('[editDispatch] notifyStockChange (original) error:', err),
+        );
+      }
       return this.getMovementById(id);
     } catch (error) {
       await queryRunner.rollbackTransaction();

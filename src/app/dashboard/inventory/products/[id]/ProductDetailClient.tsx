@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { Product } from '../../types';
 import { MovementType, TYPE_BADGE, TYPE_LABELS } from '@/app/dashboard/movements/types';
 
-interface Lot {
-  id: string;
+interface ExpirationAlert {
+  lotId: string;
   lotNumber: string;
+  productId: string;
+  expirationDate: string;
+  daysUntilExpiration: number;
   stock: number;
-  expirationDate: string | null;
-  createdAt: string;
+  level: 'CRITICAL' | 'WARNING';
 }
 
 interface MovementItem {
@@ -46,21 +48,10 @@ function StockBadge({ stock, minStock }: { stock: number; minStock: number }) {
   );
 }
 
-function getLotStatus(expirationDate: string | null): { label: string; classes: string } {
-  if (!expirationDate) {
-    return { label: 'Sin fecha', classes: 'bg-slate-50 text-slate-500 border-slate-100' };
-  }
-  const exp = new Date(expirationDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (exp < today) {
-    return { label: 'Vencido', classes: 'bg-red-50 text-red-600 border-red-100' };
-  }
-  const diffDays = Math.floor((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays <= 7) {
-    return { label: 'Próximo', classes: 'bg-orange-50 text-orange-600 border-orange-100' };
-  }
-  return { label: 'Vigente', classes: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+function daysBadgeClasses(days: number): string {
+  if (days <= 7) return 'bg-red-50 text-red-600 border-red-100';
+  if (days <= 30) return 'bg-orange-50 text-orange-600 border-orange-100';
+  return 'bg-amber-50 text-amber-600 border-amber-100';
 }
 
 function formatDate(dateStr: string): string {
@@ -98,8 +89,8 @@ function formatRelativeDate(dateStr: string): string {
 export default function ProductDetailClient({ id }: { id: string; rol: string }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [productLoading, setProductLoading] = useState(true);
-  const [lots, setLots] = useState<Lot[]>([]);
-  const [lotsLoading, setLotsLoading] = useState(true);
+  const [expAlerts, setExpAlerts] = useState<ExpirationAlert[]>([]);
+  const [expLoading, setExpLoading] = useState(true);
   const [movements, setMovements] = useState<MovementItem[]>([]);
   const [movementsLoading, setMovementsLoading] = useState(true);
 
@@ -110,11 +101,16 @@ export default function ProductDetailClient({ id }: { id: string; rol: string })
       .catch(() => {})
       .finally(() => setProductLoading(false));
 
-    fetch(`/api/v1/lots?productId=${id}`)
+    fetch('/api/v1/alerts/expiration?days=30')
       .then((r) => r.json())
-      .then((data) => setLots(Array.isArray(data) ? data : (data.data ?? [])))
+      .then((data: ExpirationAlert[]) => {
+        const filtered = Array.isArray(data)
+          ? data.filter((a) => a.productId === id).sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration)
+          : [];
+        setExpAlerts(filtered);
+      })
       .catch(() => {})
-      .finally(() => setLotsLoading(false));
+      .finally(() => setExpLoading(false));
 
     fetch(`/api/v1/movements?productId=${id}&limit=8`)
       .then((r) => r.json())
@@ -122,13 +118,6 @@ export default function ProductDetailClient({ id }: { id: string; rol: string })
       .catch(() => {})
       .finally(() => setMovementsLoading(false));
   }, [id]);
-
-  const sortedLots = [...lots].sort((a, b) => {
-    if (!a.expirationDate && !b.expirationDate) return 0;
-    if (!a.expirationDate) return 1;
-    if (!b.expirationDate) return -1;
-    return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
-  });
 
   return (
     <div className="space-y-6">
@@ -237,21 +226,29 @@ export default function ProductDetailClient({ id }: { id: string; rol: string })
 
       {/* Sections B & C */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Section B: Active lots */}
+        {/* Section B: Expiration alerts */}
         <div
           className="bg-white rounded-2xl shadow-card p-6 animate-fade-in-up"
           style={{ animationDelay: '100ms' }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-ink">Lotes activos</h2>
-            {!lotsLoading && (
-              <span className="text-xs font-semibold px-2 py-0.5 bg-brand-50 text-brand-500 rounded-full">
-                {sortedLots.length}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="text-orange-500">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M1 6H15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <path d="M5 1V3M11 1V3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <path d="M5 9H5.01M8 9H8.01M11 9H11.01M5 11.5H5.01M8 11.5H8.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-ink">Lotes próximos a vencer</h2>
+            {!expLoading && expAlerts.length > 0 && (
+              <span className="ml-auto text-xs font-semibold px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-100 rounded-full">
+                {expAlerts.length}
               </span>
             )}
           </div>
 
-          {lotsLoading ? (
+          {expLoading ? (
             <div className="space-y-2">
               {[0, 1, 2].map((i) => (
                 <div
@@ -261,84 +258,57 @@ export default function ProductDetailClient({ id }: { id: string; rol: string })
                 />
               ))}
             </div>
-          ) : sortedLots.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 48 48"
-                fill="none"
-                className="text-line mb-3"
-              >
-                <rect
-                  x="6"
-                  y="12"
-                  width="36"
-                  height="28"
-                  rx="3"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path d="M6 20H42" stroke="currentColor" strokeWidth="1.5" />
-                <path
-                  d="M16 12V8M32 12V8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M15 30H33M20 36H28"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <p className="text-sm font-medium text-ink mb-0.5">Sin lotes registrados</p>
-              <p className="text-xs text-muted">No se encontraron lotes para este producto</p>
+          ) : expAlerts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-3">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M7.5 11L10 13.5L14.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-ink">Sin vencimientos próximos</p>
+              <p className="text-xs text-muted mt-1">No hay lotes que venzan en los próximos 30 días</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line">
-                    <th className="text-left py-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted">
+                    <th className="text-left pb-2.5 pr-3 text-[10px] font-semibold uppercase tracking-widest text-muted">
                       Lote
                     </th>
-                    <th className="text-left py-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted">
+                    <th className="text-left pb-2.5 pr-3 text-[10px] font-semibold uppercase tracking-widest text-muted">
                       Vencimiento
                     </th>
-                    <th className="text-left py-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                      Stock
+                    <th className="text-left pb-2.5 pr-3 text-[10px] font-semibold uppercase tracking-widest text-muted">
+                      Días rest.
                     </th>
-                    <th className="text-left py-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                      Estado
+                    <th className="text-right pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted">
+                      Stock
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-subtle">
-                  {sortedLots.map((lot) => {
-                    const status = getLotStatus(lot.expirationDate);
-                    return (
-                      <tr key={lot.id} className="hover:bg-subtle/40 transition-colors">
-                        <td className="py-2.5 px-2 font-mono text-xs text-ink">
-                          {lot.lotNumber}
-                        </td>
-                        <td className="py-2.5 px-2 text-xs text-muted">
-                          {lot.expirationDate ? formatDate(lot.expirationDate) : '—'}
-                        </td>
-                        <td className="py-2.5 px-2 text-xs font-semibold text-ink">
-                          {lot.stock}
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${status.classes}`}
-                          >
-                            {status.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                <tbody>
+                  {expAlerts.map((alert, i) => (
+                    <tr
+                      key={alert.lotId}
+                      className={`border-b border-subtle last:border-0 animate-fade-in-up ${
+                        alert.level === 'CRITICAL' ? 'bg-red-50/40' : ''
+                      }`}
+                      style={{ animationDelay: `${i * 40}ms` }}
+                    >
+                      <td className="py-3 pr-3 font-mono text-xs text-ink">{alert.lotNumber}</td>
+                      <td className="py-3 pr-3 text-xs text-muted">{formatDate(alert.expirationDate)}</td>
+                      <td className="py-3 pr-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${daysBadgeClasses(alert.daysUntilExpiration)}`}
+                        >
+                          {alert.daysUntilExpiration} días
+                        </span>
+                      </td>
+                      <td className="py-3 text-right text-xs text-muted">{alert.stock} u.</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -372,13 +342,7 @@ export default function ProductDetailClient({ id }: { id: string; rol: string })
             </div>
           ) : movements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 48 48"
-                fill="none"
-                className="text-line mb-3"
-              >
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-line mb-3">
                 <path
                   d="M8 24H40M28 12L40 24L28 36"
                   stroke="currentColor"

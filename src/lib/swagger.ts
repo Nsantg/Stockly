@@ -383,6 +383,15 @@ const definition: swaggerJsdoc.OAS3Definition = {
           totalWarnings: { type: 'integer', example: 5 },
         },
       },
+      Settings: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          generalMinStock: { type: 'integer', minimum: 0, example: 20 },
+          expirationAlertDays: { type: 'integer', enum: [7, 15, 30, 60], example: 7 },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
       DashboardKpis: {
         type: 'object',
         properties: {

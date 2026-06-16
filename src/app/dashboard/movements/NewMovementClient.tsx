@@ -108,6 +108,17 @@ const BTN_CLASS: Record<MovementType, string> = {
   TRASLADO: 'bg-slate-600 hover:bg-slate-700',
 };
 
+const TYPE_BADGE: Record<MovementType, string> = {
+  ENTRADA: 'bg-brand-50 text-brand-500',
+  VENTA: 'bg-emerald-50 text-emerald-700',
+  DAÑO: 'bg-red-50 text-red-600',
+  VENCIMIENTO: 'bg-orange-50 text-orange-600',
+  TRASLADO: 'bg-slate-100 text-slate-600',
+  DEVOLUCION: 'bg-purple-50 text-purple-600',
+  AJUSTE_INGRESO: 'bg-teal-50 text-teal-600',
+  AJUSTE_SALIDA: 'bg-amber-50 text-amber-700',
+};
+
 interface FormState {
   quantity: string;
   proveedor: string;
@@ -643,6 +654,15 @@ function VentaSearch({
   );
 }
 
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-xs text-muted shrink-0">{label}</span>
+      <span className="text-xs text-ink font-medium text-right">{value}</span>
+    </div>
+  );
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -781,6 +801,14 @@ export default function NewMovementClient({
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [successData, setSuccessData] = useState<{
+    type: MovementType;
+    productName: string;
+    quantity: string;
+    clientName?: string;
+    lotNumber?: string;
+    observations?: string;
+  } | null>(null);
 
   const initialSourceLoadedRef = useRef(false);
   useEffect(() => {
@@ -990,15 +1018,14 @@ export default function NewMovementClient({
       }
 
       toast(`${TYPE_LABELS[selectedType!]} registrada correctamente`);
-      setSelectedType(null);
-      setProductQuery('');
-      setSelectedProduct(null);
-      setSourceMovementQuery('');
-      setSelectedSourceMovement(null);
-      setSourceMovementError('');
-      setForm(EMPTY_FORM);
-      setErrors({});
-      setEvidenceFiles([]);
+      setSuccessData({
+        type: selectedType!,
+        productName: selectedProduct?.name ?? selectedSourceMovement?.product.name ?? '',
+        quantity: form.quantity,
+        clientName: form.clientQuery || undefined,
+        lotNumber: form.lotNumber || undefined,
+        observations: form.observations || form.motivo || undefined,
+      });
     } catch {
       toast('Error de conexión', 'error');
     } finally {
@@ -1012,30 +1039,76 @@ export default function NewMovementClient({
     submit();
   };
 
+  const handleNewMovement = () => {
+    setSuccessData(null);
+    setSelectedType(null);
+    setProductQuery('');
+    setSelectedProduct(null);
+    setProductError('');
+    setSourceMovementQuery('');
+    setSelectedSourceMovement(null);
+    setSourceMovementError('');
+    setForm(EMPTY_FORM);
+    setErrors({});
+    setEvidenceFiles([]);
+  };
+
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl shadow-card p-6">
-        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-4">Tipo de movimiento</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {allowedTypes.map((type) => {
-            const cfg = TYPE_CARD[type];
-            const selected = selectedType === type;
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => handleTypeSelect(type)}
-                className={`flex flex-col items-center gap-2.5 p-4 rounded-2xl border-2 transition-all ${
-                  selected ? cfg.selected : 'bg-white border-line text-muted hover:border-brand-200 hover:text-ink hover:bg-subtle'
-                }`}
-              >
-                {cfg.icon()}
-                <span className="text-xs font-semibold leading-tight text-center">{TYPE_LABELS[type]}</span>
-              </button>
-            );
-          })}
+      {successData !== null ? (
+        <div className="bg-white rounded-2xl shadow-card p-6">
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center animate-fade-in-up">
+            <div className="h-14 w-14 rounded-full bg-emerald-50 flex items-center justify-center mb-5">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <path d="M5 14L11 20L23 8" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold mb-3 ${TYPE_BADGE[successData.type]}`}>
+              {TYPE_LABELS[successData.type]} registrada
+            </span>
+
+            <div className="w-full max-w-sm bg-subtle rounded-2xl p-4 text-left space-y-2 mb-6">
+              <SummaryRow label="Producto" value={successData.productName} />
+              <SummaryRow label="Cantidad" value={`${successData.quantity} unidades`} />
+              {successData.clientName && <SummaryRow label="Cliente" value={successData.clientName} />}
+              {successData.lotNumber && <SummaryRow label="Lote" value={successData.lotNumber} />}
+              {successData.observations && <SummaryRow label="Observaciones" value={successData.observations} />}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNewMovement}
+              className="px-6 py-2.5 text-sm font-semibold bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition-colors"
+            >
+              + Registrar otro movimiento
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="bg-white rounded-2xl shadow-card p-6">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-4">Tipo de movimiento</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {allowedTypes.map((type) => {
+                const cfg = TYPE_CARD[type];
+                const selected = selectedType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handleTypeSelect(type)}
+                    className={`flex flex-col items-center gap-2.5 p-4 rounded-2xl border-2 transition-all ${
+                      selected ? cfg.selected : 'bg-white border-line text-muted hover:border-brand-200 hover:text-ink hover:bg-subtle'
+                    }`}
+                  >
+                    {cfg.icon()}
+                    <span className="text-xs font-semibold leading-tight text-center">{TYPE_LABELS[type]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
       {selectedType && (
         <div key={selectedType} className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6 space-y-5">
@@ -1336,6 +1409,8 @@ export default function NewMovementClient({
             </button>
           </div>
         </div>
+      )}
+        </>
       )}
 
       <ConfirmModal

@@ -10,6 +10,9 @@ echo "PostgreSQL listo."
 echo "Ejecutando migraciones pendientes..."
 npm run migration:run
 
+echo "Ejecutando seed inicial (se omite si la BD ya tiene datos)..."
+npm run seed
+
 echo "Iniciando aplicacion en modo produccion..."
 export NODE_ENV=production
 exec npm run start

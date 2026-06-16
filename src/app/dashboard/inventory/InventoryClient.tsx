@@ -366,7 +366,14 @@ export default function InventoryClient({ rol }: { rol: string }) {
                 {products.map((p) => (
                   <tr key={p.id} className="hover:bg-subtle/40 transition-colors">
                     <td className="py-3 px-3 font-mono text-xs text-muted">{p.code}</td>
-                    <td className="py-3 px-3 font-medium text-ink">{p.name}</td>
+                    <td className="py-3 px-3">
+                      <Link
+                        href={`/dashboard/inventory/products/${p.id}`}
+                        className="text-brand-500 hover:text-brand-600 hover:underline transition-colors font-medium"
+                      >
+                        {p.name}
+                      </Link>
+                    </td>
                     <td className="py-3 px-3 text-muted hidden md:table-cell">
                       {p.subcategory?.category?.name ?? '—'}
                     </td>

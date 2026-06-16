@@ -18,6 +18,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DATABASE_USER ?? 'postgres',
   password: process.env.DATABASE_PASSWORD ?? 'postgres',
   database: process.env.DATABASE_NAME ?? 'stockly_db',
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
   synchronize: false,
   logging: process.env.NODE_ENV !== 'production',
   entities: isCliMode

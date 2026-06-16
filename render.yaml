@@ -30,7 +30,7 @@ services:
       - key: NEXTAUTH_SECRET
         generateValue: true
       - key: NEXTAUTH_URL
-        value: https://stockly.onrender.com  # ACTUALIZAR con tu URL real de Render tras crear el servicio
+        value: https://stockly-57lb.onrender.com  # ACTUALIZAR con tu URL real de Render tras crear el servicio
       - key: NODE_ENV
         value: production
       - key: ALERTS_BROADCAST_INTERVAL_MS

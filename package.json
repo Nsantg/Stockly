@@ -13,6 +13,7 @@
     "migration:revert": "cross-env TYPEORM_CLI=true ts-node --transpile-only -P tsconfig.typeorm.json -r dotenv/config ./node_modules/typeorm/cli.js migration:revert -d src/lib/database.ts",
     "migration:create": "cross-env TYPEORM_CLI=true ts-node --transpile-only -P tsconfig.typeorm.json -r dotenv/config ./node_modules/typeorm/cli.js migration:create",
     "seed": "cross-env TYPEORM_CLI=true ts-node --transpile-only --project tsconfig.typeorm.json -r dotenv/config -r tsconfig-paths/register src/db/seed.ts",
+    "db:reset": "cross-env TYPEORM_CLI=true ts-node --transpile-only --project tsconfig.typeorm.json -r dotenv/config -r tsconfig-paths/register src/db/reset.ts",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:integration": "jest --config jest.integration.config.js",

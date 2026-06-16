@@ -6,20 +6,65 @@ import { SystemSettings } from './types';
 
 const EXPIRATION_OPTIONS = [7, 15, 30, 60];
 
+interface NotificationToggles {
+  notifyStockAlerts: boolean;
+  notifyExpirationAlerts: boolean;
+  notifyEntryIssueAlerts: boolean;
+}
+
+function Toggle({ label, description, value, onChange }: {
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2.5">
+      <div>
+        <p className="text-sm font-medium text-ink">{label}</p>
+        <p className="text-xs text-muted mt-0.5">{description}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className="relative shrink-0 rounded-full transition-colors"
+        style={{ height: '22px', width: '40px', background: value ? '#1B3B6F' : '#E5E5EA' }}
+      >
+        <span
+          className="absolute top-0.5 left-0.5 rounded-full bg-white shadow transition-transform"
+          style={{ height: '18px', width: '18px', transform: value ? 'translateX(18px)' : 'translateX(0)' }}
+        />
+      </button>
+    </div>
+  );
+}
+
 export default function SettingsClient() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [companyName, setCompanyName] = useState('');
   const [generalMinStock, setGeneralMinStock] = useState('0');
   const [expirationAlertDays, setExpirationAlertDays] = useState(7);
+  const [notifications, setNotifications] = useState<NotificationToggles>({
+    notifyStockAlerts: true,
+    notifyExpirationAlerts: true,
+    notifyEntryIssueAlerts: true,
+  });
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetch('/api/v1/settings')
       .then((r) => r.json())
       .then((data: SystemSettings) => {
+        setCompanyName(data.companyName ?? '');
         setGeneralMinStock(String(data.generalMinStock));
         setExpirationAlertDays(data.expirationAlertDays);
+        setNotifications({
+          notifyStockAlerts: data.notifyStockAlerts,
+          notifyExpirationAlerts: data.notifyExpirationAlerts,
+          notifyEntryIssueAlerts: data.notifyEntryIssueAlerts,
+        });
       })
       .catch(() => toast('Error al cargar la configuración', 'error'))
       .finally(() => setLoading(false));
@@ -38,8 +83,10 @@ export default function SettingsClient() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          companyName: companyName.trim() || null,
           generalMinStock: Number(generalMinStock),
           expirationAlertDays,
+          ...notifications,
         }),
       });
       if (!res.ok) {
@@ -59,7 +106,7 @@ export default function SettingsClient() {
     return (
       <div className="space-y-4 max-w-2xl">
         <div className="h-8 w-48 bg-subtle rounded animate-pulse" />
-        <div className="h-64 bg-white rounded-2xl shadow-card animate-pulse" />
+        <div className="h-80 bg-white rounded-2xl shadow-card animate-pulse" />
       </div>
     );
   }
@@ -76,6 +123,21 @@ export default function SettingsClient() {
         className="animate-fade-in-up animation-delay-80 bg-white rounded-2xl shadow-card p-6 space-y-6"
       >
         <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-ink">Nombre de la empresa</label>
+          <p className="text-xs text-muted">
+            Aparece en el encabezado y pie de página de los reportes PDF exportados.
+          </p>
+          <input
+            type="text"
+            maxLength={100}
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Stockly"
+            className="w-full max-w-[320px] px-3 py-2.5 text-sm border border-line rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition-all"
+          />
+        </div>
+
+        <div className="space-y-1.5 pt-2 border-t border-line">
           <label className="block text-sm font-semibold text-ink">Stock mínimo general recomendado</label>
           <p className="text-xs text-muted">
             Se sugiere automáticamente al crear un producto nuevo, en vez de partir desde 0.
@@ -94,7 +156,7 @@ export default function SettingsClient() {
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 pt-2 border-t border-line">
           <label className="block text-sm font-semibold text-ink">Intervalo de alertas de vencimiento</label>
           <p className="text-xs text-muted">
             Los lotes que estén a esta cantidad de días o menos de vencer generan una notificación en tiempo real.
@@ -114,6 +176,33 @@ export default function SettingsClient() {
                 {days} días
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="space-y-1 pt-2 border-t border-line">
+          <label className="block text-sm font-semibold text-ink mb-1">Notificaciones en tiempo real</label>
+          <p className="text-xs text-muted mb-1">
+            Activa o desactiva cada tipo de notificación emergente. Las alertas siguen visibles en el panel de Alertas aunque estén desactivadas aquí.
+          </p>
+          <div className="divide-y divide-subtle">
+            <Toggle
+              label="Stock crítico"
+              description="Avisar cuando un producto llega o cae por debajo de su stock mínimo."
+              value={notifications.notifyStockAlerts}
+              onChange={(v) => setNotifications((p) => ({ ...p, notifyStockAlerts: v }))}
+            />
+            <Toggle
+              label="Vencimiento próximo"
+              description="Avisar cuando un lote entra en el intervalo de vencimiento configurado arriba."
+              value={notifications.notifyExpirationAlerts}
+              onChange={(v) => setNotifications((p) => ({ ...p, notifyExpirationAlerts: v }))}
+            />
+            <Toggle
+              label="Incidencias de entrada"
+              description="Avisar cuando se registra un producto dañado o faltante al recibir una entrada."
+              value={notifications.notifyEntryIssueAlerts}
+              onChange={(v) => setNotifications((p) => ({ ...p, notifyEntryIssueAlerts: v }))}
+            />
           </div>
         </div>
 

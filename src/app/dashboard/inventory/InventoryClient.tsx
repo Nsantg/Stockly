@@ -135,6 +135,7 @@ export default function InventoryClient({ rol }: { rol: string }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<Product | null>(null);
+  const [recommendedMinStock, setRecommendedMinStock] = useState(0);
 
   useEffect(() => {
     fetch('/api/v1/products/summary')
@@ -146,6 +147,11 @@ export default function InventoryClient({ rol }: { rol: string }) {
     fetch('/api/v1/categories')
       .then((r) => r.json())
       .then((data) => setCategories(Array.isArray(data) ? data : data.data ?? []))
+      .catch(() => {});
+
+    fetch('/api/v1/settings')
+      .then((r) => r.json())
+      .then((data) => setRecommendedMinStock(data.generalMinStock ?? 0))
       .catch(() => {});
   }, []);
 
@@ -473,6 +479,7 @@ export default function InventoryClient({ rol }: { rol: string }) {
         open={panelOpen}
         product={editingProduct}
         categories={categories}
+        recommendedMinStock={recommendedMinStock}
         onClose={() => { setPanelOpen(false); setEditingProduct(null); }}
         onSaved={handleSaved}
       />

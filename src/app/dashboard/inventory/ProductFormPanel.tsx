@@ -8,6 +8,7 @@ interface Props {
   open: boolean;
   product: Product | null;
   categories: Category[];
+  recommendedMinStock?: number;
   onClose: () => void;
   onSaved: (updated: Product, isNew: boolean) => void;
 }
@@ -38,7 +39,7 @@ function validate(data: ProductFormData, showSerial: boolean, isNew: boolean): E
   return e;
 }
 
-export default function ProductFormPanel({ open, product, categories, onClose, onSaved }: Props) {
+export default function ProductFormPanel({ open, product, categories, recommendedMinStock = 0, onClose, onSaved }: Props) {
   const { toast } = useToast();
   const [form, setForm] = useState<ProductFormData>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
@@ -67,11 +68,11 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
         minStock: String(product.minStock),
       });
     } else {
-      setForm(EMPTY);
+      setForm({ ...EMPTY, minStock: String(recommendedMinStock) });
       setSelectedCategoryId('');
     }
     setErrors({});
-  }, [open, product]);
+  }, [open, product, recommendedMinStock]);
 
   useEffect(() => {
     if (!selectedCategoryId) {
@@ -328,6 +329,11 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
                 onChange={(e) => set('minStock', e.target.value)}
                 className={input(!!errors.minStock)}
               />
+              {!product && recommendedMinStock > 0 && (
+                <p className="text-[11px] text-muted leading-tight">
+                  Recomendado por el admin: {recommendedMinStock}
+                </p>
+              )}
             </Field>
           </div>
         </form>

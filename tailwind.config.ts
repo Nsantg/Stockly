@@ -45,6 +45,14 @@ const config: Config = {
         'slide-down': 'slideDown 0.25s ease-out both',
         shake: 'shake 0.4s ease-out',
         spin: 'spin 0.8s linear infinite',
+        float: 'float 6s ease-in-out infinite',
+        'float-delay': 'float 7s ease-in-out 1s infinite',
+        blob: 'blob 14s ease-in-out infinite',
+        shimmer: 'shimmer 2.2s linear infinite',
+        marquee: 'marquee 28s linear infinite',
+        'spin-slow': 'spin 14s linear infinite',
+        'pulse-ring': 'pulseRing 2.4s cubic-bezier(0.4,0,0.6,1) infinite',
+        'gradient-pan': 'gradientPan 6s ease infinite',
       },
       keyframes: {
         fadeInUp: {
@@ -66,10 +74,37 @@ const config: Config = {
           '60%': { transform: 'translateX(-3px)' },
           '80%': { transform: 'translateX(3px)' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0) translateX(0)' },
+          '50%': { transform: 'translateY(-14px) translateX(6px)' },
+        },
+        blob: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(20px, -24px) scale(1.08)' },
+          '66%': { transform: 'translate(-16px, 14px) scale(0.95)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        pulseRing: {
+          '0%': { boxShadow: '0 0 0 0 rgba(224,123,57,0.45)' },
+          '70%': { boxShadow: '0 0 0 12px rgba(224,123,57,0)' },
+          '100%': { boxShadow: '0 0 0 0 rgba(224,123,57,0)' },
+        },
+        gradientPan: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
       },
       boxShadow: {
         card: '0 2px 24px rgba(0,0,0,0.06)',
         'card-sm': '0 2px 12px rgba(0,0,0,0.04)',
+        glow: '0 8px 40px rgba(27,59,111,0.18)',
       },
     },
   },

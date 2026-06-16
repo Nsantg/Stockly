@@ -11,6 +11,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["server.ts", "src/**/*.ts"],
+  "include": ["server.ts", "src/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules", ".next", "src/app/**/*.ts", "src/app/**/*.tsx"]
 }

@@ -36,15 +36,18 @@ export default function Breadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);
   const [labels, setLabels] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     segments.forEach((segment, index) => {
-      if (!UUID_REGEX.test(segment) || labels[segment]) return;
+      if (!UUID_REGEX.test(segment) || labels[segment] || pending[segment]) return;
       const resolve = resourceResolvers[segments[index - 1]];
       if (!resolve) return;
 
+      setPending((prev) => ({ ...prev, [segment]: true }));
       resolve(segment).then((label) => {
         setLabels((prev) => ({ ...prev, [segment]: label ?? segment }));
+        setPending((prev) => ({ ...prev, [segment]: false }));
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,6 +58,7 @@ export default function Breadcrumbs() {
   const crumbs = segments.map((segment, index) => ({
     href: '/' + segments.slice(0, index + 1).join('/'),
     label: routeLabels[segment] ?? labels[segment] ?? segment,
+    isLoading: UUID_REGEX.test(segment) && pending[segment] && !labels[segment],
     isLast: index === segments.length - 1,
   }));
 
@@ -67,7 +71,9 @@ export default function Breadcrumbs() {
               <path d="M4.5 2.5L7.5 6L4.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
-          {crumb.isLast ? (
+          {crumb.isLoading ? (
+            <span className="h-4 w-16 rounded bg-subtle animate-pulse" aria-hidden="true" />
+          ) : crumb.isLast ? (
             <span className="text-sm font-medium text-ink">{crumb.label}</span>
           ) : (
             <Link

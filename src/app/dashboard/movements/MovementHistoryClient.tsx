@@ -644,7 +644,11 @@ function ExportButton({
       if (format === 'excel') {
         exportToExcel(movements);
       } else {
-        exportToPdf(movements);
+        const companyName = await fetch('/api/v1/settings')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => d?.companyName ?? null)
+          .catch(() => null);
+        exportToPdf(movements, companyName);
       }
     } catch {
       toast('No se pudo generar el archivo', 'error');

@@ -21,12 +21,15 @@ export async function notifyStockChange(productId: string): Promise<void> {
   try {
     const product = await productRepository.findById(productId);
     if (product && product.stock <= product.minStock) {
-      io.to('alerts').emit('alerts:toast', {
-        level: 'critical',
-        title: 'Stock crítico',
-        message: `Stock crítico: ${product.name} tiene ${product.stock} unidades (mínimo: ${product.minStock})`,
-        href: '/dashboard/alerts',
-      });
+      const { notifyStockAlerts } = await settingsService.getSettings();
+      if (notifyStockAlerts) {
+        io.to('alerts').emit('alerts:toast', {
+          level: 'critical',
+          title: 'Stock crítico',
+          message: `Stock crítico: ${product.name} tiene ${product.stock} unidades (mínimo: ${product.minStock})`,
+          href: '/dashboard/alerts',
+        });
+      }
     }
     await broadcastSummary();
   } catch (err) {
@@ -48,8 +51,8 @@ export async function notifyExpirationIfNear(
     const todayUTC = new Date();
     todayUTC.setUTCHours(0, 0, 0, 0);
     const daysUntil = Math.round((expUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
-    const { expirationAlertDays } = await settingsService.getSettings();
-    if (daysUntil > expirationAlertDays) return;
+    const { expirationAlertDays, notifyExpirationAlerts } = await settingsService.getSettings();
+    if (!notifyExpirationAlerts || daysUntil > expirationAlertDays) return;
     const lotInfo = lotNumber ? ` — Lote ${lotNumber}` : '';
     const when = daysUntil <= 0 ? 'hoy' : `en ${daysUntil} día${daysUntil === 1 ? '' : 's'}`;
     io.to('alerts').emit('alerts:toast', {
@@ -68,12 +71,15 @@ export async function notifyEntryIssue(issue: EntryIssue): Promise<void> {
   if (!io) return;
   try {
     io.to('alerts').emit('alerts:entry_issue', issue);
-    io.to('alerts').emit('alerts:toast', {
-      level: 'warning',
-      title: 'Incidencia en entrada',
-      message: `${issue.productName}: ${issue.issueType === 'DAMAGED' ? 'producto dañado' : 'cantidad faltante'} (${issue.quantity} unidades)`,
-      href: '/dashboard/alerts',
-    });
+    const { notifyEntryIssueAlerts } = await settingsService.getSettings();
+    if (notifyEntryIssueAlerts) {
+      io.to('alerts').emit('alerts:toast', {
+        level: 'warning',
+        title: 'Incidencia en entrada',
+        message: `${issue.productName}: ${issue.issueType === 'DAMAGED' ? 'producto dañado' : 'cantidad faltante'} (${issue.quantity} unidades)`,
+        href: '/dashboard/alerts',
+      });
+    }
   } catch (err) {
     console.error('[alertNotifier] notifyEntryIssue error:', err);
   }

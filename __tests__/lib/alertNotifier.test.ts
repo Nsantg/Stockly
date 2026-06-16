@@ -62,7 +62,10 @@ describe('alertNotifier — broadcastSummary', () => {
 });
 
 describe('alertNotifier — notifyStockChange', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ notifyStockAlerts: true });
+  });
 
   it('retorna sin tocar el repositorio si getIO() es null', async () => {
     (getIO as jest.Mock).mockReturnValue(null);
@@ -110,10 +113,29 @@ describe('alertNotifier — notifyStockChange', () => {
     (productRepository.findById as jest.Mock).mockRejectedValue(new Error('db error'));
     await expect(notifyStockChange('p3')).resolves.toBeUndefined();
   });
+
+  it('NO emite alerts:toast si notifyStockAlerts está desactivado, pero sí broadcastSummary', async () => {
+    const { io, emit } = buildMockIO();
+    (getIO as jest.Mock).mockReturnValue(io);
+    (productRepository.findById as jest.Mock).mockResolvedValue({
+      id: 'p4', name: 'Producto Z', stock: 1, minStock: 5,
+    });
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ notifyStockAlerts: false });
+    (alertService.getAllAlerts as jest.Mock).mockResolvedValue(EMPTY_SUMMARY);
+
+    await notifyStockChange('p4');
+
+    const toastCall = emit.mock.calls.find((c) => c[0] === 'alerts:toast');
+    expect(toastCall).toBeUndefined();
+    expect(emit).toHaveBeenCalledWith('alerts:summary', EMPTY_SUMMARY);
+  });
 });
 
 describe('alertNotifier — notifyEntryIssue', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ notifyEntryIssueAlerts: true });
+  });
 
   const baseIssue: Partial<EntryIssue> = {
     id: 'i1',
@@ -168,12 +190,24 @@ describe('alertNotifier — notifyEntryIssue', () => {
 
     await expect(notifyEntryIssue(baseIssue as EntryIssue)).resolves.toBeUndefined();
   });
+
+  it('emite alerts:entry_issue pero NO alerts:toast si notifyEntryIssueAlerts está desactivado', async () => {
+    const { io, emit } = buildMockIO();
+    (getIO as jest.Mock).mockReturnValue(io);
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ notifyEntryIssueAlerts: false });
+
+    await notifyEntryIssue(baseIssue as EntryIssue);
+
+    expect(emit).toHaveBeenCalledWith('alerts:entry_issue', baseIssue);
+    const toastCall = emit.mock.calls.find((c) => c[0] === 'alerts:toast');
+    expect(toastCall).toBeUndefined();
+  });
 });
 
 describe('alertNotifier — notifyExpirationIfNear', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 7 });
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 7, notifyExpirationAlerts: true });
   });
 
   function dateInDays(days: number): string {
@@ -224,10 +258,18 @@ describe('alertNotifier — notifyExpirationIfNear', () => {
   it('respeta el intervalo configurado en settings (30 días)', async () => {
     const { io, emit } = buildMockIO();
     (getIO as jest.Mock).mockReturnValue(io);
-    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 30 });
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 30, notifyExpirationAlerts: true });
     await notifyExpirationIfNear('Producto V', 'L-005', dateInDays(20));
     const toast = emit.mock.calls.find((c) => c[0] === 'alerts:toast');
     expect(toast).toBeDefined();
+  });
+
+  it('NO emite toast si notifyExpirationAlerts está desactivado, aunque esté dentro del intervalo', async () => {
+    const { io, emit } = buildMockIO();
+    (getIO as jest.Mock).mockReturnValue(io);
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 7, notifyExpirationAlerts: false });
+    await notifyExpirationIfNear('Producto U', 'L-006', dateInDays(2));
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it('incluye número de lote en el mensaje cuando se provee', async () => {

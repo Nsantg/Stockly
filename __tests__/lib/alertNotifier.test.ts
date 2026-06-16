@@ -2,6 +2,7 @@ import { broadcastSummary, notifyStockChange, notifyEntryIssue, notifyExpiration
 import { getIO } from '../../src/lib/realtime/socketServer';
 import { alertService } from '../../src/service/AlertService';
 import { productRepository } from '../../src/repository/ProductRepository';
+import { settingsService } from '../../src/service/SettingsService';
 import type { EntryIssue } from '../../src/entity/EntryIssue';
 
 jest.mock('../../src/lib/realtime/socketServer', () => ({
@@ -14,6 +15,10 @@ jest.mock('../../src/service/AlertService', () => ({
 
 jest.mock('../../src/repository/ProductRepository', () => ({
   productRepository: { findById: jest.fn() },
+}));
+
+jest.mock('../../src/service/SettingsService', () => ({
+  settingsService: { getSettings: jest.fn() },
 }));
 
 const EMPTY_SUMMARY = {
@@ -166,7 +171,10 @@ describe('alertNotifier — notifyEntryIssue', () => {
 });
 
 describe('alertNotifier — notifyExpirationIfNear', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 7 });
+  });
 
   function dateInDays(days: number): string {
     const d = new Date();
@@ -211,6 +219,15 @@ describe('alertNotifier — notifyExpirationIfNear', () => {
     (getIO as jest.Mock).mockReturnValue(io);
     await notifyExpirationIfNear('Producto W', 'L-004', dateInDays(8));
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('respeta el intervalo configurado en settings (30 días)', async () => {
+    const { io, emit } = buildMockIO();
+    (getIO as jest.Mock).mockReturnValue(io);
+    (settingsService.getSettings as jest.Mock).mockResolvedValue({ expirationAlertDays: 30 });
+    await notifyExpirationIfNear('Producto V', 'L-005', dateInDays(20));
+    const toast = emit.mock.calls.find((c) => c[0] === 'alerts:toast');
+    expect(toast).toBeDefined();
   });
 
   it('incluye número de lote en el mensaje cuando se provee', async () => {

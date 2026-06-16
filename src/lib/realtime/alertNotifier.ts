@@ -1,9 +1,8 @@
 import { getIO } from './socketServer';
 import { alertService } from '../../service/AlertService';
 import { productRepository } from '../../repository/ProductRepository';
+import { settingsService } from '../../service/SettingsService';
 import type { EntryIssue } from '../../entity/EntryIssue';
-
-const EXPIRATION_THRESHOLD_DAYS = 7;
 
 export async function broadcastSummary(daysAhead = 30): Promise<void> {
   const io = getIO();
@@ -49,7 +48,8 @@ export async function notifyExpirationIfNear(
     const todayUTC = new Date();
     todayUTC.setUTCHours(0, 0, 0, 0);
     const daysUntil = Math.round((expUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysUntil > EXPIRATION_THRESHOLD_DAYS) return;
+    const { expirationAlertDays } = await settingsService.getSettings();
+    if (daysUntil > expirationAlertDays) return;
     const lotInfo = lotNumber ? ` — Lote ${lotNumber}` : '';
     const when = daysUntil <= 0 ? 'hoy' : `en ${daysUntil} día${daysUntil === 1 ? '' : 's'}`;
     io.to('alerts').emit('alerts:toast', {

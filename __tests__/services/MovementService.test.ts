@@ -15,6 +15,16 @@ jest.mock('../../src/repository/MovementRepository', () => ({
   },
 }));
 jest.mock('../../src/lib/database');
+jest.mock('../../src/lib/realtime/alertNotifier', () => ({
+  broadcastSummary: jest.fn().mockResolvedValue(undefined),
+  notifyStockChange: jest.fn().mockResolvedValue(undefined),
+  notifyExpirationIfNear: jest.fn().mockResolvedValue(undefined),
+  notifyEntryIssue: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../../src/lib/realtime/socketServer', () => ({
+  initSocketServer: jest.fn(),
+  getIO: jest.fn().mockReturnValue(null),
+}));
 
 describe('MovementService - Validación Zod (sandboxing)', () => {
   beforeEach(() => {

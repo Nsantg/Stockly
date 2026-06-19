@@ -205,6 +205,47 @@ describe('Handlers restantes de movimiento', () => {
       expect(result.type).toBe(MovementType.AJUSTE_INGRESO);
       expect(result.quantity).toBe(5);
     });
+
+    it('líneas 23-25: lanza error si sourceMovement no existe en AjusteIngreso', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.AJUSTE_INGRESO,
+        quantity: 5,
+        observations: 'Ajuste',
+        sourceMovementId: 'source-no-existe',
+      });
+      const qr: QueryRunner = {
+        manager: {
+          findOne: jest.fn().mockResolvedValue(null),
+          save: jest.fn(),
+        },
+      } as unknown as QueryRunner;
+
+      await expect(handler.execute(dto, buildProduct(), qr)).rejects.toThrow(
+        'Movimiento fuente no encontrado en la transacción',
+      );
+    });
+
+    it('líneas 27-28: lanza error si freshProduct no existe en AjusteIngreso', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.AJUSTE_INGRESO,
+        quantity: 5,
+        observations: 'Ajuste',
+        sourceMovementId: 'source-uuid',
+      });
+      const fakeSource = { id: 'source-uuid', quantity: 10 };
+      const qr: QueryRunner = {
+        manager: {
+          findOne: jest.fn()
+            .mockResolvedValueOnce(fakeSource)
+            .mockResolvedValueOnce(null),
+          save: jest.fn(),
+        },
+      } as unknown as QueryRunner;
+
+      await expect(handler.execute(dto, buildProduct(), qr)).rejects.toThrow(
+        'Producto no encontrado en la transacción',
+      );
+    });
   });
 
   describe('TrasladoHandler - CP-14', () => {

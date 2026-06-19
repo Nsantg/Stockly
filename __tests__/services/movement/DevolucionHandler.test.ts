@@ -171,5 +171,39 @@ describe('DevolucionHandler - CP-15 / CP-16 (RN-04)', () => {
 
       expect(movement.returnDescription).toBeNull();
     });
+
+    it('línea 34: lanza error si se intenta devolver más unidades de las vendidas', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.DEVOLUCION,
+        quantity: 10,
+        sourceMovementId: TEST_SOURCE_MOVEMENT_ID,
+        returnCause: 'Demasiadas',
+      });
+      const product = buildProduct({ allowsSerialNumber: true, stock: 10 });
+      const sourceMovement = buildSourceMovement({ quantity: 5 });
+      const freshProduct = buildProduct({ allowsSerialNumber: true, stock: 10, stockBodega: 10 });
+      const queryRunner = createMockQueryRunnerWithFindOne(sourceMovement, freshProduct);
+
+      await expect(handler.execute(dto, product, queryRunner)).rejects.toThrow(
+        'No se pueden devolver más unidades de las vendidas',
+      );
+    });
+
+    it('lanza error si la venta fuente ya fue anulada', async () => {
+      const dto = buildMovementDto({
+        type: MovementType.DEVOLUCION,
+        quantity: 1,
+        sourceMovementId: TEST_SOURCE_MOVEMENT_ID,
+        returnCause: 'Defecto',
+      });
+      const product = buildProduct({ allowsSerialNumber: true, stock: 10 });
+      const annulledMovement = buildSourceMovement({ isAnnulled: true });
+      const freshProduct = buildProduct({ allowsSerialNumber: true, stock: 10, stockBodega: 10 });
+      const queryRunner = createMockQueryRunnerWithFindOne(annulledMovement, freshProduct);
+
+      await expect(handler.execute(dto, product, queryRunner)).rejects.toThrow(
+        'La venta ya fue anulada',
+      );
+    });
   });
 });

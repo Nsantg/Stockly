@@ -52,12 +52,80 @@ describe('Autenticación NextAuth - Authorize', () => {
 
   it('Debe retornar null si el usuario no está activo (Soft Delete o Suspendido)', async () => {
     const mockUser = { email: 'user@stockly.com', password: 'hashed_password', isActive: false };
-    
+
     (userService.getUserByEmail as jest.Mock).mockResolvedValue(mockUser);
 
     const result = await authorizeFunction({ email: 'user@stockly.com', password: 'password123' });
 
     expect(result).toBeNull();
-    expect(bcrypt.compare).not.toHaveBeenCalled(); 
+    expect(bcrypt.compare).not.toHaveBeenCalled();
+  });
+
+  // ─── línea 16: credenciales faltantes ────────────────────────────────────
+
+  it('línea 16: retorna null si no se proporcionan credenciales (email faltante)', async () => {
+    const result = await authorizeFunction({ email: undefined, password: 'pass' });
+    expect(result).toBeNull();
+    expect(userService.getUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it('línea 16: retorna null si la contraseña falta', async () => {
+    const result = await authorizeFunction({ email: 'admin@stockly.com', password: undefined });
+    expect(result).toBeNull();
+    expect(userService.getUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it('línea 16: retorna null si el usuario no existe en la base de datos', async () => {
+    (userService.getUserByEmail as jest.Mock).mockResolvedValue(null);
+    const result = await authorizeFunction({ email: 'ghost@stockly.com', password: 'pass123' });
+    expect(result).toBeNull();
+    expect(bcrypt.compare).not.toHaveBeenCalled();
+  });
+
+  // ─── líneas 41-54: callbacks JWT y Session ────────────────────────────────
+
+  describe('JWT callback - líneas 41-47', () => {
+    it('añade datos del usuario al token cuando user está presente', async () => {
+      const jwtCallback = (authOptions.callbacks as any).jwt;
+      const token = { sub: 'sub-1' };
+      const user = {
+        id: 'uid-1',
+        nombre: 'Admin',
+        apellido: 'Stockly',
+        rol: UserRole.ADMIN,
+      };
+
+      const result = await jwtCallback({ token, user });
+
+      expect(result.id).toBe('uid-1');
+      expect(result.nombre).toBe('Admin');
+      expect(result.apellido).toBe('Stockly');
+      expect(result.rol).toBe(UserRole.ADMIN);
+    });
+
+    it('retorna el token sin cambios cuando user no está presente (refresh)', async () => {
+      const jwtCallback = (authOptions.callbacks as any).jwt;
+      const token = { sub: 'sub-1', id: 'uid-1', nombre: 'Admin' };
+
+      const result = await jwtCallback({ token, user: undefined });
+
+      expect(result.id).toBe('uid-1');
+      expect(result.nombre).toBe('Admin');
+    });
+  });
+
+  describe('Session callback - líneas 49-54', () => {
+    it('líneas 49-54: transfiere campos del token a la sesión', async () => {
+      const sessionCallback = (authOptions.callbacks as any).session;
+      const session = { user: {}, expires: '2099-01-01' };
+      const token = { id: 'uid-1', nombre: 'Admin', apellido: 'Stockly', rol: UserRole.ADMIN };
+
+      const result = await sessionCallback({ session, token });
+
+      expect(result.user.id).toBe('uid-1');
+      expect(result.user.nombre).toBe('Admin');
+      expect(result.user.apellido).toBe('Stockly');
+      expect(result.user.rol).toBe(UserRole.ADMIN);
+    });
   });
 });

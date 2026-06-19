@@ -644,7 +644,11 @@ function ExportButton({
       if (format === 'excel') {
         exportToExcel(movements);
       } else {
-        exportToPdf(movements);
+        const companyName = await fetch('/api/v1/settings')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => d?.companyName ?? null)
+          .catch(() => null);
+        exportToPdf(movements, companyName);
       }
     } catch {
       toast('No se pudo generar el archivo', 'error');
@@ -795,13 +799,13 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl shadow-card p-4">
-        <div className="flex flex-wrap gap-3 items-end">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:items-end">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-muted uppercase tracking-wider">Tipo</label>
             <TypeDropdown value={filterTypes} onChange={setFilterTypes} />
           </div>
 
-          <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+          <div className="flex flex-col gap-1 sm:flex-1 sm:min-w-[180px]">
             <label className="text-xs font-semibold text-muted uppercase tracking-wider">Producto</label>
             <div className="relative">
               <input
@@ -835,49 +839,51 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1 min-w-[160px]">
+          <div className="flex flex-col gap-1 sm:min-w-[160px]">
             <label className="text-xs font-semibold text-muted uppercase tracking-wider">Usuario</label>
             <input
               type="text"
               value={filterUser}
               placeholder="Nombre del usuario…"
               onChange={(e) => setFilterUser(e.target.value)}
-              className="px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
+              className="w-full px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider">Desde</label>
-            <input
-              type="date"
-              value={filterStart}
-              onChange={(e) => setFilterStart(e.target.value)}
-              className="px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
-            />
-          </div>
+          <div className="grid grid-cols-2 sm:flex sm:contents gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Desde</label>
+              <input
+                type="date"
+                value={filterStart}
+                onChange={(e) => setFilterStart(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
+              />
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider">Hasta</label>
-            <input
-              type="date"
-              value={filterEnd}
-              onChange={(e) => setFilterEnd(e.target.value)}
-              className="px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Hasta</label>
+              <input
+                type="date"
+                value={filterEnd}
+                onChange={(e) => setFilterEnd(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
+              />
+            </div>
           </div>
 
           <div className="flex gap-2">
             <button
               type="button"
               onClick={applyFilters}
-              className="px-4 py-2.5 text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition-colors"
+              className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition-colors"
             >
               Filtrar
             </button>
             <button
               type="button"
               onClick={clearFilters}
-              className="px-4 py-2.5 text-sm font-medium border border-line rounded-xl hover:bg-subtle text-muted transition-colors"
+              className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium border border-line rounded-xl hover:bg-subtle text-muted transition-colors"
             >
               Limpiar
             </button>
@@ -911,12 +917,12 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">Fecha</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Fecha</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Tipo</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Producto</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Cant.</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Usuario</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider">Estado</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider hidden md:table-cell">Usuario</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wider hidden sm:table-cell">Estado</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -927,7 +933,7 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
                       onClick={() => setExpandedId((p) => (p === mov.id ? null : mov.id))}
                       className={`border-b border-line cursor-pointer transition-colors ${expandedId === mov.id ? 'bg-subtle' : 'hover:bg-subtle/60'}`}
                     >
-                      <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">{fmt(mov.date)}</td>
+                      <td className="px-4 py-3 text-xs text-muted whitespace-nowrap hidden sm:table-cell">{fmt(mov.date)}</td>
                       <td className="px-4 py-3"><TypeBadge type={mov.type} /></td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
@@ -936,10 +942,10 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-ink">{mov.quantity}</td>
-                      <td className="px-4 py-3 text-sm text-ink whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-ink whitespace-nowrap hidden md:table-cell">
                         {mov.user.nombre} {mov.user.apellido}
                       </td>
-                      <td className="px-4 py-3"><StatusBadge isAnnulled={mov.isAnnulled} /></td>
+                      <td className="px-4 py-3 hidden sm:table-cell"><StatusBadge isAnnulled={mov.isAnnulled} /></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
                           {canAnnul && !mov.isAnnulled && (
@@ -955,7 +961,8 @@ export default function MovementHistoryClient({ rol }: { rol: string }) {
                               onClick={(e) => { e.stopPropagation(); setDispatchTarget(mov); }}
                               className="px-2.5 py-1.5 text-xs font-medium rounded-lg hover:bg-brand-50 text-muted hover:text-brand-600 transition-colors whitespace-nowrap"
                             >
-                              Editar despacho
+                              <span className="hidden sm:inline">Editar despacho</span>
+                              <span className="sm:hidden">Editar</span>
                             </button>
                           )}
                           <svg

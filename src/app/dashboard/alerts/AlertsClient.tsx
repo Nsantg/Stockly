@@ -3,6 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
+import { useAlerts } from '@/components/providers/AlertsSocketProvider'
+
+interface EntryIssue {
+  id: string
+  movementId: string
+  productId: string
+  productName: string
+  quantity: number
+  issueType: 'DAMAGED' | 'MISSING'
+  createdAt: string
+}
 
 interface StockAlert {
   type: 'STOCK_CRITICAL'
@@ -165,24 +176,29 @@ function StockProgressBar({ stock, minStock }: { stock: number; minStock: number
 
 export default function AlertsClient({ userName }: { userName: string }) {
   const { toast } = useToast()
+  const { summary: socketSummary, entryIssues: socketIssues } = useAlerts()
   const [summary, setSummary] = useState<AlertSummary | null>(null)
   const [reloading, setReloading] = useState(false)
   const [expirationDays, setExpirationDays] = useState<ExpirationDays>(30)
   const [expAlerts, setExpAlerts] = useState<ExpirationAlert[] | null>(null)
   const [expLoading, setExpLoading] = useState(false)
+  const [entryIssues, setEntryIssues] = useState<EntryIssue[] | null>(null)
 
   const loadAll = useCallback(async () => {
     setReloading(true)
     setSummary(null)
+    setEntryIssues(null)
     try {
-      const [summaryRes, expRes] = await Promise.all([
+      const [summaryRes, expRes, issuesRes] = await Promise.all([
         fetch('/api/v1/alerts/stock'),
         fetch(`/api/v1/alerts/expiration?days=${expirationDays}`),
+        fetch('/api/v1/entry-issues'),
       ])
       if (!summaryRes.ok || !expRes.ok) throw new Error()
-      const [stockAlerts, expirationAlerts]: [StockAlert[], ExpirationAlert[]] = await Promise.all([
+      const [stockAlerts, expirationAlerts, issues]: [StockAlert[], ExpirationAlert[], EntryIssue[]] = await Promise.all([
         summaryRes.json(),
         expRes.json(),
+        issuesRes.ok ? issuesRes.json() : Promise.resolve([]),
       ])
       const totalCritical = stockAlerts.filter((a) => a.level === 'CRITICAL').length
         + expirationAlerts.filter((a) => a.level === 'CRITICAL').length
@@ -191,10 +207,12 @@ export default function AlertsClient({ userName }: { userName: string }) {
       setExpAlerts(
         [...expirationAlerts].sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration),
       )
+      setEntryIssues(Array.isArray(issues) ? issues : [])
     } catch {
       toast('Error al cargar alertas', 'error')
       setSummary(DEFAULT_SUMMARY)
       setExpAlerts([])
+      setEntryIssues([])
     } finally {
       setReloading(false)
     }
@@ -203,6 +221,24 @@ export default function AlertsClient({ userName }: { userName: string }) {
   useEffect(() => {
     loadAll()
   }, [loadAll])
+
+  // Sincronización en tiempo real: solo actualiza una vez que el estado inicial está cargado
+  useEffect(() => {
+    if (!socketSummary || summary === null) return
+    setSummary(socketSummary)
+    setExpAlerts(
+      [...socketSummary.expirationAlerts]
+        .filter((a) => a.daysUntilExpiration <= expirationDays)
+        .sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration),
+    )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketSummary])
+
+  useEffect(() => {
+    if (entryIssues === null) return
+    setEntryIssues(socketIssues as EntryIssue[])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socketIssues])
 
   const loadExpiration = useCallback(async (days: ExpirationDays) => {
     setExpLoading(true)
@@ -225,7 +261,7 @@ export default function AlertsClient({ userName }: { userName: string }) {
     loadExpiration(days)
   }
 
-  const criticalCount = summary?.totalCritical ?? 0
+  const criticalCount = (summary?.totalCritical ?? 0) + (entryIssues?.length ?? 0)
 
   return (
     <div className="space-y-6">
@@ -259,12 +295,12 @@ export default function AlertsClient({ userName }: { userName: string }) {
       {summary === null ? (
         <SummarySkeleton />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard
             label="Críticas totales"
-            value={summary.totalCritical}
+            value={criticalCount}
             description="Requieren atención inmediata"
-            color={summary.totalCritical > 0 ? 'text-red-600' : 'text-ink'}
+            color={criticalCount > 0 ? 'text-red-600' : 'text-ink'}
             delay={0}
           />
           <SummaryCard
@@ -280,6 +316,13 @@ export default function AlertsClient({ userName }: { userName: string }) {
             description="Productos bajo el mínimo"
             color={summary.stockAlerts.length > 0 ? 'text-brand-500' : 'text-ink'}
             delay={160}
+          />
+          <SummaryCard
+            label="Entradas pendientes"
+            value={entryIssues?.length ?? 0}
+            description="Dañadas o con cantidad incorrecta"
+            color={(entryIssues?.length ?? 0) > 0 ? 'text-orange-600' : 'text-ink'}
+            delay={240}
           />
         </div>
       )}
@@ -326,13 +369,92 @@ export default function AlertsClient({ userName }: { userName: string }) {
                   <StockProgressBar stock={alert.stock} minStock={alert.minStock} />
                 </div>
                 <Link
-                  href={`/dashboard/movements?tab=new&type=ENTRADA&productId=${alert.productId}`}
+                  href={`/dashboard/movements?tab=new&type=ENTRADA&productId=${alert.productId}&minStock=${alert.minStock}`}
                   className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors"
                 >
                   Registrar entrada
                 </Link>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-card-sm p-5">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="text-orange-500">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 2L16.5 15.5H1.5L9 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M9 7V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="9" cy="13.5" r="0.8" fill="currentColor" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-semibold text-ink">Entradas pendientes de ajuste</h3>
+          {entryIssues !== null && (
+            <span className="text-xs text-muted">({entryIssues.length})</span>
+          )}
+        </div>
+
+        {entryIssues === null ? (
+          <div className="space-y-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-subtle rounded-xl h-16 animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
+            ))}
+          </div>
+        ) : entryIssues.length === 0 ? (
+          <div className="flex flex-col items-center py-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-3">
+              <IconCheck />
+            </div>
+            <p className="text-sm font-semibold text-ink">Sin entradas pendientes</p>
+            <p className="text-xs text-muted mt-1">Todas las entradas están en orden</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {entryIssues.map((issue, i) => {
+              const isDamaged = issue.issueType === 'DAMAGED'
+              const href = isDamaged
+                ? `/dashboard/movements?tab=new&type=DAÑO&productId=${issue.productId}&issueId=${issue.id}`
+                : `/dashboard/movements?tab=new&type=AJUSTE_INGRESO&productId=${issue.productId}&sourceMovementId=${issue.movementId}&issueId=${issue.id}`
+              return (
+                <div
+                  key={issue.id}
+                  className={`flex items-start gap-4 p-4 rounded-xl border animate-fade-in-up ${
+                    isDamaged ? 'border-red-100 bg-red-50/50' : 'border-orange-100 bg-orange-50/50'
+                  }`}
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-semibold text-ink truncate">{issue.productName}</p>
+                      <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border ${
+                        isDamaged
+                          ? 'bg-red-100 text-red-600 border-red-200'
+                          : 'bg-orange-100 text-orange-600 border-orange-200'
+                      }`}>
+                        {isDamaged ? 'Dañado' : 'Faltante'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted">
+                      {issue.quantity} unidades · Entrada del {fmtDate(issue.createdAt)}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {isDamaged
+                        ? 'Registra el daño para descontar del inventario'
+                        : 'Ajusta la cantidad real que llegó'}
+                    </p>
+                  </div>
+                  <Link
+                    href={href}
+                    className={`shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-colors ${
+                      isDamaged ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'
+                    }`}
+                  >
+                    {isDamaged ? 'Registrar daño' : 'Ajustar cantidad'}
+                  </Link>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -348,7 +470,7 @@ export default function AlertsClient({ userName }: { userName: string }) {
               <span className="text-xs text-muted">({expAlerts.length})</span>
             )}
           </div>
-          <div className="flex gap-1 p-1 bg-subtle rounded-xl">
+          <div className="flex gap-1 p-1 bg-subtle rounded-xl self-start sm:self-auto overflow-x-auto">
             {EXPIRATION_DAYS.map((d) => (
               <button
                 key={d}

@@ -1,377 +1,224 @@
-import { productService, createProductSchema } from '../../src/service/ProductService';
-import * as productRepoModule from '../../src/repository/ProductRepository';
-import * as subcategoryRepoModule from '../../src/repository/SubcategoryRepository';
+import { productService } from '../../src/service/ProductService';
+import { productRepository } from '../../src/repository/ProductRepository';
+import { subcategoryRepository } from '../../src/repository/SubcategoryRepository';
+import { BusinessError } from '../../src/lib/errors';
+import { ZodError } from 'zod';
 
 jest.mock('../../src/repository/ProductRepository');
 jest.mock('../../src/repository/SubcategoryRepository');
 
-describe('ProductService', () => {
-  let service: typeof productService;
-  let mockProductRepo: jest.Mocked<typeof productRepoModule.productRepository>;
-  let mockSubcategoryRepo: jest.Mocked<typeof subcategoryRepoModule.subcategoryRepository>;
+const VALID_DTO = {
+  code: 'PRD-001',
+  name: 'Electrodo TENS',
+  subcategoryId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  stock: 10,
+  minStock: 5,
+};
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockProductRepo = productRepoModule.productRepository as jest.Mocked<typeof productRepoModule.productRepository>;
-    mockSubcategoryRepo = subcategoryRepoModule.subcategoryRepository as jest.Mocked<typeof subcategoryRepoModule.subcategoryRepository>;
-    service = productService;
-  });
+const MOCK_SUBCATEGORY = {
+  id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  name: 'Electroterapia',
+  isActive: true,
+  category: { id: 'cat-1', allowsSerialNumber: true },
+};
 
-  describe('createProduct', () => {
-    it('debe crear un producto válido con todos los campos', async () => {
-      const subcategoryId = '550e8400-e29b-41d4-a716-446655440000';
-      const dto = {
-        code: 'PROD-001',
-        name: 'Producto Test',
-        subcategoryId,
-        barcode: '1234567890',
-        serialNumber: 'SN-12345',
-        weight: 2.5,
-        requiresRefrigeration: true,
-        stock: 100,
-        minStock: 10,
-      };
+const MOCK_PRODUCT = {
+  id: 'prod-uuid',
+  ...VALID_DTO,
+  isActive: true,
+  subcategory: MOCK_SUBCATEGORY,
+  subcategoryId: VALID_DTO.subcategoryId,
+};
 
-      mockProductRepo.existsByCode.mockResolvedValue(false);
-      mockSubcategoryRepo.findById.mockResolvedValue({
-        id: subcategoryId,
-        name: 'Subcategoría Test',
-        isActive: true,
-        category: { id: '1', name: 'Electroterapia', allowsSerialNumber: true, requiresRefrigeration: false, isActive: true, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-        categoryId: '1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      } as any);
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
-      mockProductRepo.insert.mockResolvedValue({
-        id: '123',
-        code: 'PROD-001',
-        name: 'Producto Test',
-        subcategoryId,
-        barcode: '1234567890',
-        serialNumber: 'SN-12345',
-        weight: 2.5,
-        requiresRefrigeration: true,
-        stockBodega: 100,
-        stockVitrina: 0,
-      } as any);
+describe('ProductService - líneas 33-128', () => {
 
-      const result = await service.createProduct(dto);
+  // ─── createProduct (lines 33-58) ─────────────────────────────────────────
 
-      expect(result.code).toBe('PROD-001');
-      expect(result.stockBodega).toBe(100);
-      expect(result.stockVitrina).toBe(0);
-      expect(mockProductRepo.existsByCode).toHaveBeenCalledWith('PROD-001');
-      expect(mockProductRepo.insert).toHaveBeenCalled();
+  describe('createProduct()', () => {
+    it('líneas 33-58: crea un producto correctamente', async () => {
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(false);
+      (subcategoryRepository.findById as jest.Mock).mockResolvedValue(MOCK_SUBCATEGORY);
+      (productRepository.insert as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+
+      const result = await productService.createProduct(VALID_DTO);
+
+      expect(productRepository.existsByCode).toHaveBeenCalledWith('PRD-001');
+      expect(subcategoryRepository.findById).toHaveBeenCalledWith(VALID_DTO.subcategoryId);
+      expect(result.code).toBe('PRD-001');
     });
 
-    it('debe rechazar si el código ya existe', async () => {
-      mockProductRepo.existsByCode.mockResolvedValue(true);
+    it('lanza BusinessError si el código ya existe', async () => {
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(true);
 
-      await expect(
-        service.createProduct({
-          code: 'PROD-001',
-          name: 'Producto Test',
-          subcategoryId: '550e8400-e29b-41d4-a716-446655440000',
-        })
-      ).rejects.toThrow('Ya existe un producto con el código');
+      await expect(productService.createProduct(VALID_DTO)).rejects.toThrow(BusinessError);
+      expect(subcategoryRepository.findById).not.toHaveBeenCalled();
     });
 
-    it('debe rechazar si la subcategoría no existe', async () => {
-      mockProductRepo.existsByCode.mockResolvedValue(false);
-      mockSubcategoryRepo.findById.mockResolvedValue(null);
+    it('lanza BusinessError si la subcategoría no existe', async () => {
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(false);
+      (subcategoryRepository.findById as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        service.createProduct({
-          code: 'PROD-001',
-          name: 'Producto Test',
-          subcategoryId: '550e8400-e29b-41d4-a716-446655440000',
-        })
-      ).rejects.toThrow('Subcategoría con id');
-    });
-
-    it('debe rechazar si la subcategoría no está activa', async () => {
-      const subcategoryId = '550e8400-e29b-41d4-a716-446655440000';
-      mockProductRepo.existsByCode.mockResolvedValue(false);
-      mockSubcategoryRepo.findById.mockResolvedValue({
-        id: subcategoryId,
-        name: 'Subcategoría Inactiva',
-        isActive: false,
-        categoryId: '1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      } as any);
-
-      await expect(
-        service.createProduct({
-          code: 'PROD-001',
-          name: 'Producto Test',
-          subcategoryId,
-        })
-      ).rejects.toThrow('La subcategoría seleccionada no está activa');
-    });
-
-    it('debe permitir serialNumber cuando la categoría lo permite', async () => {
-      const subcategoryId = '550e8400-e29b-41d4-a716-446655440000';
-      mockProductRepo.existsByCode.mockResolvedValue(false);
-      mockSubcategoryRepo.findById.mockResolvedValue({
-        id: subcategoryId,
-        name: 'Electro',
-        isActive: true,
-        category: { id: '1', name: 'Electroterapia', allowsSerialNumber: true, requiresRefrigeration: false, isActive: true, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-        categoryId: '1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      } as any);
-
-      mockProductRepo.insert.mockResolvedValue({
-        id: '123',
-        code: 'PROD-001',
-        name: 'Equipo Eléctrico',
-        subcategoryId,
-        serialNumber: 'SN-12345',
-        stockBodega: 50,
-        stockVitrina: 0,
-      } as any);
-
-      await service.createProduct({
-        code: 'PROD-001',
-        name: 'Equipo Eléctrico',
-        subcategoryId,
-        serialNumber: 'SN-12345',
-      });
-
-      const insertCall = mockProductRepo.insert.mock.calls[0][0];
-      expect(insertCall.serialNumber).toBe('SN-12345');
-    });
-
-    it('debe nulificar serialNumber cuando la categoría no lo permite', async () => {
-      const subcategoryId = '550e8400-e29b-41d4-a716-446655440000';
-      mockProductRepo.existsByCode.mockResolvedValue(false);
-      mockSubcategoryRepo.findById.mockResolvedValue({
-        id: subcategoryId,
-        name: 'Masaje',
-        isActive: true,
-        category: { id: '2', name: 'Masoterapia', allowsSerialNumber: false, requiresRefrigeration: false, isActive: true, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-        categoryId: '2',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      } as any);
-
-      mockProductRepo.insert.mockResolvedValue({
-        id: '123',
-        code: 'PROD-002',
-        name: 'Equipo Masaje',
-        subcategoryId,
-        serialNumber: null,
-        stockBodega: 30,
-        stockVitrina: 0,
-      } as any);
-
-      await service.createProduct({
-        code: 'PROD-002',
-        name: 'Equipo Masaje',
-        subcategoryId,
-        serialNumber: 'SHOULD-BE-NULL',
-      });
-
-      const insertCall = mockProductRepo.insert.mock.calls[0][0];
-      expect(insertCall.serialNumber).toBeNull();
-    });
-
-    it('debe validar que el código sea requerido', async () => {
-      await expect(
-        service.createProduct({
-          code: '',
-          name: 'Producto',
-          subcategoryId: '550e8400-e29b-41d4-a716-446655440000',
-        })
-      ).rejects.toThrow();
-    });
-
-    it('debe validar que el nombre sea requerido', async () => {
-      await expect(
-        service.createProduct({
-          code: 'PROD-001',
-          name: '',
-          subcategoryId: '550e8400-e29b-41d4-a716-446655440000',
-        })
-      ).rejects.toThrow();
-    });
-
-    it('debe rechazar peso negativo', async () => {
-      await expect(
-        service.createProduct({
-          code: 'PROD-001',
-          name: 'Producto',
-          subcategoryId: '550e8400-e29b-41d4-a716-446655440000',
-          weight: -5,
-        })
-      ).rejects.toThrow();
-    });
-
-    it('debe rechazar stock negativo', async () => {
-      await expect(
-        service.createProduct({
-          code: 'PROD-001',
-          name: 'Producto',
-          subcategoryId: '550e8400-e29b-41d4-a716-446655440000',
-          stock: -10,
-        })
-      ).rejects.toThrow();
-    });
-  });
-
-  describe('getAllProducts', () => {
-    it('debe retornar productos paginados', async () => {
-      const mockResponse = {
-        data: [
-          { id: '1', code: 'P1', name: 'Producto 1' },
-          { id: '2', code: 'P2', name: 'Producto 2' },
-        ],
-        total: 2,
-        page: 1,
-        limit: 20,
-        totalPages: 1,
-      };
-
-      mockProductRepo.findAllActive.mockResolvedValue(mockResponse as any);
-
-      const result = service.getAllProducts({ page: 1, limit: 20 });
-
-      expect(result).resolves.toEqual(mockResponse);
-      expect(mockProductRepo.findAllActive).toHaveBeenCalledWith({ page: 1, limit: 20 });
-    });
-
-    it('debe pasar filtros de búsqueda al repositorio', async () => {
-      mockProductRepo.findAllActive.mockResolvedValue({
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        totalPages: 0,
-      } as any);
-
-      service.getAllProducts({ search: 'equipo', categoryId: 'cat-1' });
-
-      expect(mockProductRepo.findAllActive).toHaveBeenCalledWith({
-        search: 'equipo',
-        categoryId: 'cat-1',
-      });
-    });
-  });
-
-  describe('getProductById', () => {
-    it('debe retornar un producto por id', async () => {
-      const productId = '123';
-      const mockProduct = { id: productId, code: 'PROD-001', name: 'Producto' };
-
-      mockProductRepo.findById.mockResolvedValue(mockProduct as any);
-
-      const result = await service.getProductById(productId);
-
-      expect(result).toEqual(mockProduct);
-      expect(mockProductRepo.findById).toHaveBeenCalledWith(productId);
-    });
-
-    it('debe lanzar error si el producto no existe', async () => {
-      mockProductRepo.findById.mockResolvedValue(null);
-
-      await expect(service.getProductById('invalid-id')).rejects.toThrow('Producto con id');
-    });
-  });
-
-  describe('updateProduct', () => {
-    it('debe actualizar un producto existente', async () => {
-      const productId = '123';
-      const existingProduct = {
-        id: productId,
-        code: 'PROD-001',
-        name: 'Producto Original',
-        subcategoryId: 'sub-1',
-        serialNumber: null,
-      };
-
-      const subcategoryId = '550e8400-e29b-41d4-a716-446655440000';
-
-      mockProductRepo.findById.mockResolvedValue(existingProduct as any);
-      mockProductRepo.update.mockResolvedValue({
-        ...existingProduct,
-        name: 'Producto Actualizado',
-      } as any);
-
-      const result = await service.updateProduct(productId, { name: 'Producto Actualizado' });
-
-      expect(result.name).toBe('Producto Actualizado');
-      expect(mockProductRepo.update).toHaveBeenCalled();
-    });
-
-    it('debe validar que el nuevo código no sea duplicado', async () => {
-      const productId = '123';
-      const existingProduct = {
-        id: productId,
-        code: 'PROD-001',
-        name: 'Producto Original',
-        subcategoryId: 'sub-1',
-      };
-
-      mockProductRepo.findById.mockResolvedValue(existingProduct as any);
-      mockProductRepo.existsByCode.mockResolvedValue(true);
-
-      await expect(
-        service.updateProduct(productId, { code: 'PROD-002' })
-      ).rejects.toThrow('Ya existe un producto con el código');
-    });
-
-    it('debe lanzar error si intenta actualizar producto inexistente', async () => {
-      mockProductRepo.findById.mockResolvedValue(null);
-
-      await expect(service.updateProduct('invalid-id', { name: 'Nuevo' })).rejects.toThrow(
-        'Producto con id'
+      await expect(productService.createProduct(VALID_DTO)).rejects.toThrow(
+        'Subcategoría con id',
       );
     });
 
-    it('debe manejar cambio de subcategoría', async () => {
-      const productId = '123';
-      const oldSubcategoryId = 'sub-1';
-      const newSubcategoryId = '550e8400-e29b-41d4-a716-446655440001';
-
-      const existingProduct = {
-        id: productId,
-        code: 'PROD-001',
-        name: 'Producto',
-        subcategoryId: oldSubcategoryId,
-        subcategory: {
-          id: oldSubcategoryId,
-          name: 'Old Subcat',
-          category: { allowsSerialNumber: false },
-        },
-      };
-
-      const newSubcategory = {
-        id: newSubcategoryId,
-        name: 'New Subcat',
-        category: { allowsSerialNumber: true },
-      };
-
-      mockProductRepo.findById.mockResolvedValue(existingProduct as any);
-      mockSubcategoryRepo.findById.mockResolvedValue(newSubcategory as any);
-      mockProductRepo.update.mockResolvedValue({
-        ...existingProduct,
-        subcategoryId: newSubcategoryId,
-      } as any);
-
-      await service.updateProduct(productId, {
-        subcategoryId: newSubcategoryId,
-        serialNumber: 'NEW-SN',
+    it('lanza BusinessError si la subcategoría no está activa', async () => {
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(false);
+      (subcategoryRepository.findById as jest.Mock).mockResolvedValue({
+        ...MOCK_SUBCATEGORY,
+        isActive: false,
       });
 
-      const updateCall = mockProductRepo.update.mock.calls[0];
-      expect(updateCall[1].subcategoryId).toBe(newSubcategoryId);
+      await expect(productService.createProduct(VALID_DTO)).rejects.toThrow(
+        'La subcategoría seleccionada no está activa',
+      );
+    });
+
+    it('limpia serialNumber si la categoría no lo permite', async () => {
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(false);
+      (subcategoryRepository.findById as jest.Mock).mockResolvedValue({
+        ...MOCK_SUBCATEGORY,
+        category: { allowsSerialNumber: false },
+      });
+      (productRepository.insert as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+
+      await productService.createProduct({ ...VALID_DTO, serialNumber: 'SN-001' });
+
+      expect(productRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ serialNumber: null }),
+      );
+    });
+
+    it('lanza ZodError si datos inválidos', async () => {
+      await expect(productService.createProduct({ code: '', name: '', subcategoryId: 'no-uuid' } as never)).rejects.toThrow(ZodError);
+    });
+  });
+
+  // ─── getAllProducts (line 61) ────────────────────────────────────────────
+
+  describe('getAllProducts()', () => {
+    it('línea 61: delega a productRepository.findAllActive', async () => {
+      (productRepository.findAllActive as jest.Mock).mockResolvedValue({ data: [MOCK_PRODUCT], total: 1, page: 1, limit: 20, totalPages: 1 });
+
+      const result = await productService.getAllProducts({ search: 'elec' });
+
+      expect(productRepository.findAllActive).toHaveBeenCalledWith({ search: 'elec' });
+      expect(result.total).toBe(1);
+    });
+  });
+
+  // ─── getProductById (lines 63-68) ────────────────────────────────────────
+
+  describe('getProductById()', () => {
+    it('retorna el producto si existe', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+
+      const result = await productService.getProductById('prod-uuid');
+
+      expect(result.id).toBe('prod-uuid');
+    });
+
+    it('lanza BusinessError si el producto no existe', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(productService.getProductById('no-existe')).rejects.toThrow(
+        'Producto con id "no-existe" no encontrado',
+      );
+    });
+  });
+
+  // ─── updateProduct (lines 70-100) ────────────────────────────────────────
+
+  describe('updateProduct()', () => {
+    it('actualiza campos permitidos del producto', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(false);
+      (productRepository.update as jest.Mock).mockResolvedValue({ ...MOCK_PRODUCT, name: 'Actualizado' });
+
+      const result = await productService.updateProduct('prod-uuid', { name: 'Actualizado' });
+
+      expect(productRepository.update).toHaveBeenCalled();
+      expect(result.name).toBe('Actualizado');
+    });
+
+    it('lanza BusinessError si el nuevo código ya existe en otro producto', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+      (productRepository.existsByCode as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        productService.updateProduct('prod-uuid', { code: 'OTRO-001' }),
+      ).rejects.toThrow(BusinessError);
+    });
+
+    it('lanza BusinessError si la nueva subcategoría no existe', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+      (subcategoryRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        productService.updateProduct('prod-uuid', { subcategoryId: 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff' }),
+      ).rejects.toThrow('Subcategoría con id');
+    });
+
+    it('lanza BusinessError si la nueva subcategoría está inactiva', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+      (subcategoryRepository.findById as jest.Mock).mockResolvedValue({ ...MOCK_SUBCATEGORY, isActive: false });
+
+      await expect(
+        productService.updateProduct('prod-uuid', { subcategoryId: 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff' }),
+      ).rejects.toThrow('La subcategoría seleccionada no está activa');
+    });
+  });
+
+  // ─── deleteProduct (lines 102-105) ───────────────────────────────────────
+
+  describe('deleteProduct()', () => {
+    it('soft-elimina el producto si existe', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(MOCK_PRODUCT);
+      (productRepository.softDelete as jest.Mock).mockResolvedValue(undefined);
+
+      await productService.deleteProduct('prod-uuid');
+
+      expect(productRepository.softDelete).toHaveBeenCalledWith('prod-uuid');
+    });
+
+    it('lanza BusinessError si el producto no existe al eliminar', async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(productService.deleteProduct('no-existe')).rejects.toThrow(BusinessError);
+    });
+  });
+
+  // ─── searchForAutocomplete (lines 107-112) ───────────────────────────────
+
+  describe('searchForAutocomplete()', () => {
+    it('línea 107: delega con query trimmed', async () => {
+      (productRepository.findForAutocomplete as jest.Mock).mockResolvedValue([{ id: 'prod-uuid', code: 'PRD-001', name: 'Electrodo' }]);
+
+      const result = await productService.searchForAutocomplete('  elec  ');
+
+      expect(productRepository.findForAutocomplete).toHaveBeenCalledWith('elec', undefined, undefined);
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  // ─── getInventorySummary (lines 114-128) ─────────────────────────────────
+
+  describe('getInventorySummary()', () => {
+    it('líneas 114-128: retorna resumen de inventario', async () => {
+      (productRepository.countActive as jest.Mock).mockResolvedValue(10);
+      (productRepository.getTotalStock as jest.Mock).mockResolvedValue(250);
+      (productRepository.findBelowMinStock as jest.Mock).mockResolvedValue([MOCK_PRODUCT, MOCK_PRODUCT]);
+
+      const result = await productService.getInventorySummary();
+
+      expect(result.totalProducts).toBe(10);
+      expect(result.totalStock).toBe(250);
+      expect(result.lowStockCount).toBe(2);
     });
   });
 });

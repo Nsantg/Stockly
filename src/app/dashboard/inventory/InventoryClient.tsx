@@ -135,6 +135,7 @@ export default function InventoryClient({ rol }: { rol: string }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<Product | null>(null);
+  const [recommendedMinStock, setRecommendedMinStock] = useState(0);
 
   useEffect(() => {
     fetch('/api/v1/products/summary')
@@ -146,6 +147,11 @@ export default function InventoryClient({ rol }: { rol: string }) {
     fetch('/api/v1/categories')
       .then((r) => r.json())
       .then((data) => setCategories(Array.isArray(data) ? data : data.data ?? []))
+      .catch(() => {});
+
+    fetch('/api/v1/settings')
+      .then((r) => r.json())
+      .then((data) => setRecommendedMinStock(data.generalMinStock ?? 0))
       .catch(() => {});
   }, []);
 
@@ -260,12 +266,12 @@ export default function InventoryClient({ rol }: { rol: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-up">
         <div>
           <h2 className="text-xl font-semibold text-ink">Inventario</h2>
           <p className="text-sm text-muted mt-0.5">Gestión de productos y stock</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-start">
           <Link
             href="/dashboard/inventory/categories"
             className="text-xs font-medium text-brand-500 hover:text-brand-700 transition-colors"
@@ -366,7 +372,14 @@ export default function InventoryClient({ rol }: { rol: string }) {
                 {products.map((p) => (
                   <tr key={p.id} className="hover:bg-subtle/40 transition-colors">
                     <td className="py-3 px-3 font-mono text-xs text-muted">{p.code}</td>
-                    <td className="py-3 px-3 font-medium text-ink">{p.name}</td>
+                    <td className="py-3 px-3">
+                      <Link
+                        href={`/dashboard/inventory/products/${p.id}`}
+                        className="text-brand-500 hover:text-brand-600 hover:underline transition-colors font-medium"
+                      >
+                        {p.name}
+                      </Link>
+                    </td>
                     <td className="py-3 px-3 text-muted hidden md:table-cell">
                       {p.subcategory?.category?.name ?? '—'}
                     </td>
@@ -466,6 +479,7 @@ export default function InventoryClient({ rol }: { rol: string }) {
         open={panelOpen}
         product={editingProduct}
         categories={categories}
+        recommendedMinStock={recommendedMinStock}
         onClose={() => { setPanelOpen(false); setEditingProduct(null); }}
         onSaved={handleSaved}
       />

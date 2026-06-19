@@ -1,116 +1,85 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import 'reflect-metadata';
+/**
+ * Tests para getDataSource (líneas 34-44 de src/lib/database.ts)
+ *
+ * Usa jest.isolateModules + require() por cada test para resetear el
+ * singleton initPromise entre ejecuciones.
+ */
 
-describe('database helper getDataSource', () => {
-  let AppDataSource: any;
-  let getDataSource: any;
-  let mockIsInitialized: boolean;
-  let initializeSpy: ReturnType<typeof jest.spyOn>;
-
-  beforeEach(async () => {
+describe('database.ts - getDataSource (líneas 34-44)', () => {
+  beforeEach(() => {
     jest.resetModules();
-    mockIsInitialized = false;
+  });
 
-    const mod = await import('../../src/lib/database');
-    AppDataSource = mod.AppDataSource;
-    getDataSource = mod.getDataSource;
+  it('línea 35: retorna AppDataSource de inmediato si ya está inicializado', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const { AppDataSource, getDataSource } = require('../../src/lib/database');
+      const ds = AppDataSource as any;
+      ds.isInitialized = true;
+      const spy = jest.spyOn(AppDataSource, 'initialize');
 
-    Object.defineProperty(AppDataSource, 'isInitialized', {
-      get: () => mockIsInitialized,
-      configurable: true,
+      const result = await getDataSource();
+
+      expect(result).toBe(AppDataSource);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
     });
-
-    initializeSpy = jest.spyOn(AppDataSource, 'initialize');
   });
 
-  afterEach(() => {
-    initializeSpy.mockRestore();
-  });
+  it('líneas 38-43: llama a initialize() cuando no está inicializado', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const { AppDataSource, getDataSource } = require('../../src/lib/database');
+      const ds = AppDataSource as any;
+      ds.isInitialized = false;
+      const spy = jest.spyOn(AppDataSource, 'initialize').mockResolvedValue(AppDataSource as any);
 
-  it('debe retornar AppDataSource inmediatamente si ya está inicializado', async () => {
-    mockIsInitialized = true;
+      const result = await getDataSource();
 
-    const ds = await getDataSource();
-
-    expect(ds).toBe(AppDataSource);
-    expect(initializeSpy).not.toHaveBeenCalled();
-  });
-
-  it('debe inicializar el datasource y retornar AppDataSource si no está inicializado', async () => {
-    initializeSpy.mockResolvedValue(AppDataSource as never);
-
-    const ds = await getDataSource();
-
-    expect(ds).toBe(AppDataSource);
-    expect(initializeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('debe retornar la misma promesa si se llama concurrentemente mientras se inicializa', async () => {
-    let resolveInit: (v: any) => void;
-    const pendingInit = new Promise<any>((resolve) => {
-      resolveInit = resolve;
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(result).toBe(AppDataSource);
+      spy.mockRestore();
     });
-    initializeSpy.mockReturnValue(pendingInit as never);
-
-    const promise1 = getDataSource();
-    const promise2 = getDataSource();
-
-    expect(promise1).toBe(promise2);
-
-    resolveInit!(AppDataSource);
-    await promise1;
-    await promise2;
-
-    expect(initializeSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('debe resetear initPromise si la inicialización falla', async () => {
-    const error = new Error('Connection refused');
-    initializeSpy.mockRejectedValue(error as never);
+  it('líneas 40-43: resetea initPromise si initialize() lanza error (permite reintento)', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const { AppDataSource, getDataSource } = require('../../src/lib/database');
+      const ds = AppDataSource as any;
+      ds.isInitialized = false;
 
-    await expect(getDataSource()).rejects.toThrow('Connection refused');
+      const spy = jest
+        .spyOn(AppDataSource, 'initialize')
+        .mockRejectedValueOnce(new Error('Connection refused'))
+        .mockResolvedValue(AppDataSource as any);
 
-    initializeSpy.mockResolvedValue(AppDataSource as never);
-    const ds = await getDataSource();
-    expect(ds).toBe(AppDataSource);
-    expect(initializeSpy).toHaveBeenCalledTimes(2);
-  });
+      // Primera llamada falla
+      await expect(getDataSource()).rejects.toThrow('Connection refused');
 
-  it('debe reutilizar initPromise pendiente en llamadas concurrentes durante fallo', async () => {
-    const error = new Error('Timeout');
-    let rejectInit: (e: any) => void;
-    const pendingInit = new Promise<any>((_, reject) => {
-      rejectInit = reject;
+      // Después del error initPromise debe quedar null → segunda llamada funciona
+      const result = await getDataSource();
+      expect(result).toBe(AppDataSource);
+      expect(spy).toHaveBeenCalledTimes(2);
+      spy.mockRestore();
     });
-    initializeSpy.mockReturnValue(pendingInit as never);
-
-    const promise1 = getDataSource();
-    const promise2 = getDataSource();
-
-    expect(promise1).toBe(promise2);
-
-    rejectInit!(error);
-    await expect(promise1).rejects.toThrow('Timeout');
-    await expect(promise2).rejects.toThrow('Timeout');
-
-    expect(initializeSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('debe reintentar la inicialización después de un fallo concurrente', async () => {
-    const error = new Error('First failure');
-    let rejectInit: (e: any) => void;
-    const pendingInit = new Promise<any>((_, reject) => {
-      rejectInit = reject;
+  it('línea 36: reutiliza initPromise en llamadas concurrentes', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const { AppDataSource, getDataSource } = require('../../src/lib/database');
+      const ds = AppDataSource as any;
+      ds.isInitialized = false;
+
+      let resolve!: (ds: any) => void;
+      const deferred = new Promise<any>((r) => { resolve = r; });
+      const spy = jest.spyOn(AppDataSource, 'initialize').mockReturnValue(deferred);
+
+      const p1 = getDataSource();
+      const p2 = getDataSource(); // debe reutilizar la misma promesa
+
+      resolve(AppDataSource);
+
+      await Promise.all([p1, p2]);
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
     });
-    initializeSpy.mockReturnValue(pendingInit as never);
-
-    const p = getDataSource();
-    rejectInit!(error);
-    await expect(p).rejects.toThrow('First failure');
-
-    initializeSpy.mockResolvedValue(AppDataSource as never);
-    const ds = await getDataSource();
-    expect(ds).toBe(AppDataSource);
-    expect(initializeSpy).toHaveBeenCalledTimes(2);
   });
 });

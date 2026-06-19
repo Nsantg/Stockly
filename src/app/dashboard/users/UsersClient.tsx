@@ -150,14 +150,14 @@ export default function UsersClient({ currentUserId }: { currentUserId: string }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 animate-fade-in-up">
         <div>
           <h2 className="text-xl font-semibold text-ink">Gestión de usuarios</h2>
           <p className="text-sm text-muted mt-0.5">Administra los accesos y roles del equipo</p>
         </div>
         <button
           onClick={() => { setEditingUser(null); setModalOpen(true); }}
-          className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+          className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors self-start"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1V13M1 7H13" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
@@ -194,10 +194,10 @@ export default function UsersClient({ currentUserId }: { currentUserId: string }
                 <thead>
                   <tr className="border-b border-subtle">
                     <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider">Nombre</th>
-                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider">Email</th>
+                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider hidden sm:table-cell">Email</th>
                     <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider">Rol</th>
-                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider">Estado</th>
-                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider">Creado</th>
+                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider hidden sm:table-cell">Estado</th>
+                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted uppercase tracking-wider hidden md:table-cell">Creado</th>
                     <th className="px-6 py-3.5" />
                   </tr>
                 </thead>
@@ -211,16 +211,16 @@ export default function UsersClient({ currentUserId }: { currentUserId: string }
                       <td className="px-6 py-4 font-medium text-ink whitespace-nowrap">
                         {user.nombre} {user.apellido}
                       </td>
-                      <td className="px-4 py-4 text-muted whitespace-nowrap">{user.email}</td>
+                      <td className="px-4 py-4 text-muted whitespace-nowrap hidden sm:table-cell">{user.email}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <RoleBadge rol={user.rol} />
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap hidden sm:table-cell">
                         <StatusBadge active={user.isActive} />
                       </td>
-                      <td className="px-4 py-4 text-muted whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                      <td className="px-4 py-4 text-muted whitespace-nowrap hidden md:table-cell">{formatDate(user.createdAt)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => { setEditingUser(user); setModalOpen(true); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-brand-50 text-muted hover:text-brand-600 transition-colors"

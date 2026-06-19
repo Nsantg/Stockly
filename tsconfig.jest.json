@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "__tests__/**/*.ts",
+    "__bdd__/**/*.ts",
+    "src/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", ".next", "dist"]
+}

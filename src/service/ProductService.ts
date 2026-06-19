@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { productRepository, ProductFilters } from '../repository/ProductRepository';
 import { subcategoryRepository } from '../repository/SubcategoryRepository';
 import { Product } from '../entity/Product';
+import { BusinessError } from '../lib/errors';
 
 export const createProductSchema = z.object({
-  code: z.string().min(1, 'El código es requerido').trim(),
-  name: z.string().min(1, 'El nombre es requerido').trim(),
+  code: z.string().min(1, 'El código es requerido').max(50).trim(),
+  name: z.string().min(1, 'El nombre es requerido').max(100).trim(),
   subcategoryId: z.string().uuid('El subcategoryId debe ser un UUID válido'),
-  barcode: z.string().trim().optional().nullable(),
-  serialNumber: z.string().trim().optional().nullable(),
+  barcode: z.string().max(50).trim().optional().nullable(),
+  serialNumber: z.string().max(50).trim().optional().nullable(),
   weight: z.number().positive('El peso debe ser un número positivo').optional().nullable(),
   requiresRefrigeration: z.boolean().optional().default(false),
   stock: z.number().int().min(0, 'El stock no puede ser negativo').default(0),
@@ -33,15 +34,15 @@ class ProductService {
 
     const codeExists = await productRepository.existsByCode(data.code);
     if (codeExists) {
-      throw new Error(`Ya existe un producto con el código "${data.code}"`);
+      throw new BusinessError(`Ya existe un producto con el código "${data.code}"`);
     }
 
     const subcategory = await subcategoryRepository.findById(data.subcategoryId);
     if (!subcategory) {
-      throw new Error(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
+      throw new BusinessError(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
     }
     if (!subcategory.isActive) {
-      throw new Error('La subcategoría seleccionada no está activa');
+      throw new BusinessError('La subcategoría seleccionada no está activa');
     }
 
     const serialNumber = subcategory.category?.allowsSerialNumber
@@ -63,7 +64,7 @@ class ProductService {
   async getProductById(id: string): Promise<Product> {
     const product = await productRepository.findById(id);
     if (!product) {
-      throw new Error(`Producto con id "${id}" no encontrado`);
+      throw new BusinessError(`Producto con id "${id}" no encontrado`);
     }
     return product;
   }
@@ -75,7 +76,7 @@ class ProductService {
     if (data.code && data.code !== product.code) {
       const codeExists = await productRepository.existsByCode(data.code, id);
       if (codeExists) {
-        throw new Error(`Ya existe un producto con el código "${data.code}"`);
+        throw new BusinessError(`Ya existe un producto con el código "${data.code}"`);
       }
     }
 
@@ -85,7 +86,10 @@ class ProductService {
     if (data.subcategoryId && data.subcategoryId !== product.subcategoryId) {
       const found = await subcategoryRepository.findById(data.subcategoryId);
       if (!found) {
-        throw new Error(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
+        throw new BusinessError(`Subcategoría con id "${data.subcategoryId}" no encontrada`);
+      }
+      if (!found.isActive) {
+        throw new BusinessError('La subcategoría seleccionada no está activa');
       }
       subcategory = found;
     }
@@ -96,7 +100,9 @@ class ProductService {
         : null;
     }
 
-    return productRepository.update(id, { ...data, subcategoryId: targetSubcategoryId });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { stock: _stock, ...safeData } = data;
+    return productRepository.update(id, { ...safeData, subcategoryId: targetSubcategoryId });
   }
 
   async deleteProduct(id: string): Promise<void> {
@@ -104,8 +110,12 @@ class ProductService {
     await productRepository.softDelete(id);
   }
 
-  searchForAutocomplete(query: string): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
-    return productRepository.findForAutocomplete(query.trim());
+  searchForAutocomplete(
+    query: string,
+    allowsSerialNumber?: boolean,
+    onlyWithVentas?: boolean,
+  ): Promise<Pick<Product, 'id' | 'code' | 'name'>[]> {
+    return productRepository.findForAutocomplete(query.trim(), allowsSerialNumber, onlyWithVentas);
   }
 
   async getInventorySummary(): Promise<InventorySummary> {

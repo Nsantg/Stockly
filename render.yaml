@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: stockly
+    env: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_HOST
+        fromDatabase:
+          name: stockly-db
+          property: host
+      - key: DATABASE_PORT
+        fromDatabase:
+          name: stockly-db
+          property: port
+      - key: DATABASE_USER
+        fromDatabase:
+          name: stockly-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: stockly-db
+          property: password
+      - key: DATABASE_NAME
+        fromDatabase:
+          name: stockly-db
+          property: database
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: NEXTAUTH_URL
+        value: https://stockly-57lb.onrender.com  # ACTUALIZAR con tu URL real de Render tras crear el servicio
+      - key: NODE_ENV
+        value: production
+      - key: ALERTS_BROADCAST_INTERVAL_MS
+        value: "900000"
+      # Las siguientes variables debes cargarlas manualmente en el dashboard de Render
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+databases:
+  - name: stockly-db
+    plan: free
+    databaseName: stockly_db
+    user: stockly
+    region: oregon

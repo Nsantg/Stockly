@@ -3,7 +3,7 @@
 **Proyecto:** Nuclear 2026 (N2026), gestor de inventario Stockly  
 **Asignatura:** Pruebas de Software | Arquitectura de Software | Programación con tecnologías web  
 **Plan de referencia:** `PT-DCP-01-Plan y Casos De Prueba Nuclear2026 (3) (2).pdf`  
-**Última ejecución registrada:** 7 de junio de 2026 — unitarias: 59 pasaron; BDD: 5 escenarios; integración: 7 pruebas (PostgreSQL)
+**Última ejecución registrada:** 15 de junio de 2026 — unitarias: 73 pasaron; BDD: 5 escenarios; integración: 7 pruebas (PostgreSQL)
 
 ---
 
@@ -115,7 +115,7 @@ __tests__/
 
 ## Qué tenemos cubierto hoy
 
-Al último corrido teníamos 11 suites y 59 casos: todos pasaron, sin omitidos ni fallos.
+Al último corrido teníamos 12 suites y 73 casos: todos pasaron, sin omitidos ni fallos.
 
 | Archivo | Casos | Qué valida |
 |---------|-------|------------|
@@ -130,6 +130,7 @@ Al último corrido teníamos 11 suites y 59 casos: todos pasaron, sin omitidos n
 | `auth.test.ts` | 3 | Autenticación NextAuth (RNF-03) |
 | `inventory.integration.test.ts` | 3 | RF-01, RF-02 (N2026-3, N2026-5) |
 | `users.integration.test.ts` | 3 | CP-19, CP-20, RF-15, RF-16, RNF-03 (401, 403, 201) |
+| `alertNotifier.test.ts` | 11 | broadcastSummary (3), notifyStockChange (4), notifyEntryIssue (4) — guards, emits y resiliencia |
 
 ### Cobertura destacada en módulos críticos
 

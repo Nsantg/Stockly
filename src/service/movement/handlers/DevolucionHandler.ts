@@ -3,32 +3,63 @@ import { Movement } from '../../../entity/Movement';
 import { Product } from '../../../entity/Product';
 import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
+import { BusinessError } from '../../../lib/errors';
 
 export class DevolucionHandler extends BaseMovementHandler {
   async validate(dto: CreateMovementDto, product: Product): Promise<void> {
     if (!product.subcategory?.category?.allowsSerialNumber) {
-      throw new Error(
+      throw new BusinessError(
         'Solo se pueden registrar devoluciones de productos eléctricos (con número de serie habilitado)',
       );
     }
-    if (!dto.clientId) {
-      throw new Error('La devolución requiere un cliente (clientId)');
+    if (!dto.sourceMovementId) {
+      throw new BusinessError('La devolución requiere una venta de origen (sourceMovementId)');
     }
     if (!dto.returnCause) {
-      throw new Error('La devolución requiere la causa (returnCause)');
+      throw new BusinessError('La devolución requiere la causa (returnCause)');
     }
   }
 
   async execute(
     dto: CreateMovementDto,
-    product: Product,
+    _product: Product,
     queryRunner: QueryRunner,
   ): Promise<Movement> {
-    await this.applyStockDelta(queryRunner, product, dto.quantity, 'bodega');
+    const sourceMovement = await queryRunner.manager.findOne(Movement, {
+      where: { id: dto.sourceMovementId! },
+    });
+    if (!sourceMovement) throw new BusinessError('Movimiento de venta no encontrado en la transacción');
+    if (sourceMovement.isAnnulled) throw new BusinessError('La venta ya fue anulada');
+    if (dto.quantity > sourceMovement.quantity) {
+      throw new BusinessError(
+        `No se pueden devolver más unidades de las vendidas (máx. ${sourceMovement.quantity})`,
+      );
+    }
+
+    const freshProduct = await queryRunner.manager.findOne(Product, {
+      where: { id: dto.productId! },
+    });
+    if (!freshProduct) throw new BusinessError('Producto no encontrado en la transacción');
+
+    freshProduct.stockBodega += dto.quantity;
+    freshProduct.stock = freshProduct.stockBodega + freshProduct.stockVitrina;
+    await queryRunner.manager.save(Product, freshProduct);
+
+    if (dto.quantity === sourceMovement.quantity) {
+      sourceMovement.isAnnulled = true;
+      sourceMovement.annulledAt = new Date();
+      sourceMovement.annulledById = dto.userId;
+      sourceMovement.annulledReason = `Devolución completa: ${dto.returnCause}`;
+      await queryRunner.manager.save(Movement, sourceMovement);
+    } else {
+      sourceMovement.quantity = sourceMovement.quantity - dto.quantity;
+      await queryRunner.manager.save(Movement, sourceMovement);
+    }
+
     return this.persist(
       queryRunner,
       this.buildMovement(dto, {
-        clientId: dto.clientId ?? null,
+        clientId: sourceMovement.clientId,
         returnCause: dto.returnCause ?? null,
         returnDescription: dto.returnDescription ?? null,
       }),

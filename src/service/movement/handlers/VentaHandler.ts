@@ -4,14 +4,15 @@ import { Product } from '../../../entity/Product';
 import { Lot } from '../../../entity/Lot';
 import type { CreateMovementDto } from '../../MovementService';
 import { BaseMovementHandler } from './BaseMovementHandler';
+import { BusinessError } from '../../../lib/errors';
 
 export class VentaHandler extends BaseMovementHandler {
   async validate(dto: CreateMovementDto, product: Product): Promise<void> {
     if (!dto.clientId) {
-      throw new Error('La venta requiere un cliente (clientId)');
+      throw new BusinessError('La venta requiere un cliente (clientId)');
     }
     if (!dto.clientType) {
-      throw new Error('La venta requiere el tipo de cliente (clientType)');
+      throw new BusinessError('La venta requiere el tipo de cliente (clientType)');
     }
     this.assertSufficientStock(product, dto.quantity);
   }

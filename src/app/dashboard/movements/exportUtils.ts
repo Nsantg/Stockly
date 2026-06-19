@@ -48,7 +48,7 @@ export function exportToExcel(movements: Movement[]): void {
   XLSX.writeFile(wb, `historial-movimientos-${todayStr()}.xlsx`);
 }
 
-export function exportToPdf(movements: Movement[]): void {
+export function exportToPdf(movements: Movement[], companyName?: string | null): void {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
   const brand = '#1B3B6F';
@@ -57,7 +57,7 @@ export function exportToPdf(movements: Movement[]): void {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(brand);
-  doc.text('STOCKLY — Historial de Movimientos', 14, 16);
+  doc.text(`${(companyName || 'STOCKLY').toUpperCase()} — Historial de Movimientos`, 14, 16);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -123,7 +123,7 @@ export function exportToPdf(movements: Movement[]): void {
       doc.setFontSize(7);
       doc.setTextColor(gray);
       doc.text(
-        `Stockly — Página ${currentPage} de ${pageCount}`,
+        `${companyName || 'Stockly'} — Página ${currentPage} de ${pageCount}`,
         doc.internal.pageSize.getWidth() / 2,
         doc.internal.pageSize.getHeight() - 6,
         { align: 'center' },

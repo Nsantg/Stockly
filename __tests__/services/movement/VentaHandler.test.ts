@@ -1,7 +1,6 @@
 import { VentaHandler } from '../../../src/service/movement/handlers/VentaHandler';
 import { MovementType } from '../../../src/entity/MovementType';
 import { ClientType } from '../../../src/entity/ClientType';
-import { Lot } from '../../../src/entity/Lot';
 import {
   buildMovementDto,
   buildProduct,
@@ -104,23 +103,40 @@ describe('VentaHandler - CP-10 / CP-11 (RN-06)', () => {
       expect(movement.totalWeight).toBeNull();
     });
 
-    it('debe actualizar el stock del lote si existen lotes para el producto', async () => {
-      const dto = buildMovementDto({
-        quantity: 3,
-        clientId: TEST_CLIENT_ID,
-        clientType: ClientType.MAYORISTA,
-      });
-      const product = buildProduct({ stock: 10 });
+    it('líneas 33-34: descuenta stock del lote FEFO cuando existen lotes con stock', async () => {
+      const dto = buildMovementDto({ quantity: 3, clientId: TEST_CLIENT_ID, clientType: ClientType.DETAL });
+      const product = buildProduct({ stock: 50, stockBodega: 50, stockVitrina: 0 });
+
+      const mockLot = { id: 'lot-uuid', stock: 10 };
+      const queryRunnerWithLots = {
+        manager: {
+          save: jest.fn().mockImplementation(async (_entity: unknown, data: unknown) => ({
+            id: 'movement-uuid',
+            ...(data as object),
+          })),
+          find: jest.fn().mockResolvedValue([mockLot]),
+          insert: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({}),
+        },
+      } as unknown as import('typeorm').QueryRunner;
+
+      await handler.execute(dto, product, queryRunnerWithLots);
+
+      expect(queryRunnerWithLots.manager.update).toHaveBeenCalledWith(
+        expect.anything(),
+        'lot-uuid',
+        { stock: 7 },
+      );
+    });
+
+    it('líneas 33-34: no actualiza lotes cuando no hay lotes disponibles', async () => {
+      const dto = buildMovementDto({ quantity: 2, clientId: TEST_CLIENT_ID, clientType: ClientType.DETAL });
+      const product = buildProduct({ stock: 50 });
       const queryRunner = createMockQueryRunner();
-      
-      const mockLot = { id: 'lot-1', productId: product.id, stock: 5 };
-      (queryRunner.manager.find as jest.Mock).mockResolvedValue([mockLot]);
 
       await handler.execute(dto, product, queryRunner);
 
-      expect(queryRunner.manager.update).toHaveBeenCalledWith(Lot, 'lot-1', {
-        stock: 2,
-      });
+      expect(queryRunner.manager.update).not.toHaveBeenCalled();
     });
   });
 });

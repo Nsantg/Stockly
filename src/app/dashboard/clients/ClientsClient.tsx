@@ -8,6 +8,9 @@ import ClientModal from './ClientModal';
 
 const CREATE_ROLES = ['Admin', 'Almacenista', 'Despachador'];
 const WRITE_ROLES = ['Admin', 'Almacenista'];
+const PAGE_SIZE = 9;
+
+type TypeFilter = 'all' | 'Detal' | 'Mayorista';
 
 function ClientTypeBadge({ type }: { type: string }) {
   if (type === 'Mayorista') {
@@ -76,6 +79,8 @@ export default function ClientsClient({ rol }: { rol: string }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [confirmClient, setConfirmClient] = useState<Client | null>(null);
@@ -84,6 +89,8 @@ export default function ClientsClient({ rol }: { rol: string }) {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => { setPage(1); }, [debouncedSearch, typeFilter]);
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -101,6 +108,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
   const filtered = clients.filter((c) => {
+    if (typeFilter !== 'all' && c.clientType !== typeFilter) return false;
     if (!debouncedSearch) return true;
     const q = debouncedSearch.toLowerCase();
     return (
@@ -111,6 +119,9 @@ export default function ClientsClient({ rol }: { rol: string }) {
       (c.phone ?? '').includes(q)
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleDeleteConfirmed = async () => {
     if (!confirmClient) return;
@@ -128,7 +139,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 animate-fade-in-up">
         <div>
           <h2 className="text-xl font-semibold text-ink">Clientes</h2>
           <p className="text-sm text-muted mt-0.5">Gestión de clientes registrados</p>
@@ -136,7 +147,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
         {canCreate && (
           <button
             onClick={() => { setEditingClient(null); setModalOpen(true); }}
-            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors self-start"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1V13M1 7H13" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
@@ -146,34 +157,53 @@ export default function ClientsClient({ rol }: { rol: string }) {
         )}
       </div>
 
-      <div className="animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-        <div className="relative">
+      <div className="animate-fade-in-up flex flex-col sm:flex-row gap-3" style={{ animationDelay: '60ms' }}>
+        <div className="relative flex-1">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" />
             <path d="M11 11L13.5 13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
           </svg>
           <input
             type="text"
-            placeholder="Buscar por nombre, ciudad, email…"
+            placeholder="Buscar por nombre, tipo, ciudad, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 bg-white transition-all"
           />
+        </div>
+        <div className="flex gap-1 p-1 bg-subtle rounded-xl shrink-0">
+          {(['all', 'Detal', 'Mayorista'] as TypeFilter[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                typeFilter === t
+                  ? t === 'Mayorista'
+                    ? 'bg-accent-500 text-white shadow-sm'
+                    : t === 'Detal'
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'bg-white text-ink shadow-sm'
+                  : 'text-muted hover:text-ink hover:bg-white/60'
+              }`}
+            >
+              {t === 'all' ? 'Todos' : t}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 9 }).map((_, i) => (
               <CardSkeleton key={i} delay={i * 60} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState searching={!!debouncedSearch} />
+          <EmptyState searching={!!(debouncedSearch || typeFilter !== 'all')} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((client, i) => (
+            {paginated.map((client, i) => (
               <div
                 key={client.id}
                 style={{ animationDelay: `${i * 60}ms` }}
@@ -214,7 +244,7 @@ export default function ClientsClient({ rol }: { rol: string }) {
                 </div>
 
                 {canWrite && (
-                  <div className="flex items-center gap-1 pt-2 border-t border-subtle opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 pt-2 border-t border-subtle sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => { setEditingClient(client); setModalOpen(true); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-brand-50 text-muted hover:text-brand-600 transition-colors"
@@ -240,6 +270,47 @@ export default function ClientsClient({ rol }: { rol: string }) {
           </div>
         )}
       </div>
+
+      {!loading && filtered.length > PAGE_SIZE && (
+        <div className="animate-fade-in-up flex items-center justify-between px-1" style={{ animationDelay: '120ms' }}>
+          <p className="text-xs text-muted">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length} clientes
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-2 rounded-lg border border-line text-muted hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i + 1)}
+                className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-semibold transition-colors ${
+                  page === i + 1
+                    ? 'bg-brand-500 text-white'
+                    : 'border border-line text-muted hover:text-ink hover:bg-subtle'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-2 rounded-lg border border-line text-muted hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M5 2L10 7L5 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         open={!!confirmClient}

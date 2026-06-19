@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { alertService } from '../service/AlertService';
 import { requireSession } from '../lib/permissions';
+import { BusinessError } from '../lib/errors';
 
 function handleError(error: unknown): NextResponse {
-  if (error instanceof Error) {
+  if (error instanceof BusinessError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  console.error(error);
   return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
 }
 
@@ -124,7 +126,7 @@ class AlertController {
 
     try {
       const raw = parseInt(new URL(request.url).searchParams.get('days') ?? '30', 10);
-      const days = Number.isNaN(raw) ? 30 : raw;
+      const days = Number.isNaN(raw) ? 30 : Math.min(raw, 90);
       const summary = await alertService.getAllAlerts(days);
       return NextResponse.json(summary);
     } catch (error) {

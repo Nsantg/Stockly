@@ -110,4 +110,117 @@ describe('UserService - Registro de Usuarios', () => {
       expect(userRepository.save).not.toHaveBeenCalled();
     });
   });
+
+  // ─── Métodos CRUD adicionales (líneas 47-79) ─────────────────────────────
+
+  describe('getUserByEmail()', () => {
+    it('línea 47: delega en userRepository.findByEmail', async () => {
+      const mockUser = { id: 'uid-1', email: 'juan@stockly.com' };
+      (userRepository.findByEmail as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.getUserByEmail('juan@stockly.com');
+
+      expect(userRepository.findByEmail).toHaveBeenCalledWith('juan@stockly.com');
+      expect(result?.email).toBe('juan@stockly.com');
+    });
+
+    it('retorna null si el email no existe', async () => {
+      (userRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+      const result = await userService.getUserByEmail('no@existe.com');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('listUsers()', () => {
+    it('línea 51: delega en findAllActive', async () => {
+      const activeUsers = [{ id: 'uid-1', isActive: true }];
+      (userRepository.findAllActive as jest.Mock).mockResolvedValue(activeUsers);
+
+      const result = await userService.listUsers();
+
+      expect(userRepository.findAllActive).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('getAllUsers()', () => {
+    it('línea 55: delega en findAll', async () => {
+      const allUsers = [{ id: 'uid-1' }, { id: 'uid-2' }];
+      (userRepository.findAll as jest.Mock).mockResolvedValue(allUsers);
+
+      const result = await userService.getAllUsers();
+
+      expect(userRepository.findAll).toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('getUserById()', () => {
+    it('líneas 59-62: retorna el usuario si existe', async () => {
+      const mockUser = { id: 'uid-1', nombre: 'Juan' };
+      (userRepository.findById as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.getUserById('uid-1');
+
+      expect(userRepository.findById).toHaveBeenCalledWith('uid-1');
+      expect(result.id).toBe('uid-1');
+    });
+
+    it('línea 61: lanza BusinessError si no existe', async () => {
+      (userRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.getUserById('no-existe')).rejects.toThrow('Usuario no encontrado');
+    });
+  });
+
+  describe('updateUser()', () => {
+    const existingUser = { id: 'uid-1', nombre: 'Juan', email: 'juan@stockly.com', isActive: true };
+
+    it('líneas 64-70: actualiza campos y persiste', async () => {
+      (userRepository.findById as jest.Mock).mockResolvedValue({ ...existingUser });
+      (userRepository.emailExists as jest.Mock).mockResolvedValue(false);
+      (userRepository.save as jest.Mock).mockResolvedValue({ ...existingUser, nombre: 'Nuevo' });
+
+      const result = await userService.updateUser('uid-1', { nombre: 'Nuevo' });
+
+      expect(userRepository.save).toHaveBeenCalledTimes(1);
+      expect(result.nombre).toBe('Nuevo');
+    });
+
+    it('lanza BusinessError si el nuevo email ya está en uso por otro usuario', async () => {
+      (userRepository.findById as jest.Mock).mockResolvedValue({ ...existingUser });
+      (userRepository.emailExists as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        userService.updateUser('uid-1', { email: 'otro@stockly.com' }),
+      ).rejects.toThrow('El email ya está en uso');
+    });
+
+    it('lanza BusinessError si el usuario a actualizar no existe', async () => {
+      (userRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.updateUser('no-existe', { nombre: 'X' })).rejects.toThrow(
+        'Usuario no encontrado',
+      );
+    });
+  });
+
+  describe('deactivateUser()', () => {
+    it('líneas 72-75: desactiva el usuario si existe', async () => {
+      const mockUser = { id: 'uid-1', isActive: true };
+      (userRepository.findById as jest.Mock).mockResolvedValue(mockUser);
+      (userRepository.deactivate as jest.Mock).mockResolvedValue(undefined);
+
+      await userService.deactivateUser('uid-1');
+
+      expect(userRepository.deactivate).toHaveBeenCalledWith('uid-1');
+    });
+
+    it('lanza BusinessError si el usuario no existe al desactivar', async () => {
+      (userRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.deactivateUser('no-existe')).rejects.toThrow('Usuario no encontrado');
+      expect(userRepository.deactivate).not.toHaveBeenCalled();
+    });
+  });
 });

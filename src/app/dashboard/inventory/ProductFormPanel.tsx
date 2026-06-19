@@ -8,6 +8,7 @@ interface Props {
   open: boolean;
   product: Product | null;
   categories: Category[];
+  recommendedMinStock?: number;
   onClose: () => void;
   onSaved: (updated: Product, isNew: boolean) => void;
 }
@@ -26,19 +27,19 @@ const EMPTY: ProductFormData = {
 
 type Errors = Partial<Record<keyof ProductFormData, string>>;
 
-function validate(data: ProductFormData, showSerial: boolean): Errors {
+function validate(data: ProductFormData, showSerial: boolean, isNew: boolean): Errors {
   const e: Errors = {};
   if (!data.code.trim()) e.code = 'El código es requerido';
   if (!data.name.trim()) e.name = 'El nombre es requerido';
   if (!data.subcategoryId) e.subcategoryId = 'Selecciona una subcategoría';
   if (data.weight && isNaN(Number(data.weight))) e.weight = 'Debe ser un número';
-  if (isNaN(Number(data.stock)) || Number(data.stock) < 0) e.stock = 'Stock inválido';
+  if (isNew && (isNaN(Number(data.stock)) || Number(data.stock) < 0)) e.stock = 'Stock inválido';
   if (isNaN(Number(data.minStock)) || Number(data.minStock) < 0) e.minStock = 'Stock mínimo inválido';
   if (showSerial && !data.serialNumber.trim()) e.serialNumber = 'El número de serie es requerido';
   return e;
 }
 
-export default function ProductFormPanel({ open, product, categories, onClose, onSaved }: Props) {
+export default function ProductFormPanel({ open, product, categories, recommendedMinStock = 0, onClose, onSaved }: Props) {
   const { toast } = useToast();
   const [form, setForm] = useState<ProductFormData>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
@@ -67,11 +68,11 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
         minStock: String(product.minStock),
       });
     } else {
-      setForm(EMPTY);
+      setForm({ ...EMPTY, minStock: String(recommendedMinStock) });
       setSelectedCategoryId('');
     }
     setErrors({});
-  }, [open, product]);
+  }, [open, product, recommendedMinStock]);
 
   useEffect(() => {
     if (!selectedCategoryId) {
@@ -96,7 +97,7 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validate(form, showSerial);
+    const errs = validate(form, showSerial, !product);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setSaving(true);
@@ -109,7 +110,7 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
         weight: form.weight ? Number(form.weight) : null,
         subcategoryId: form.subcategoryId,
         requiresRefrigeration: form.requiresRefrigeration,
-        stock: Number(form.stock),
+        ...(!product && { stock: Number(form.stock) }),
         minStock: Number(form.minStock),
       };
 
@@ -299,15 +300,27 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Stock inicial" error={errors.stock}>
-              <input
-                type="number"
-                min="0"
-                value={form.stock}
-                onChange={(e) => set('stock', e.target.value)}
-                className={input(!!errors.stock)}
-              />
-            </Field>
+            {product ? (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider">Stock actual</label>
+                <div className={`${input(false)} bg-subtle text-muted cursor-not-allowed select-none`}>
+                  {form.stock}
+                </div>
+                <p className="text-[11px] text-muted leading-tight">
+                  Usa movimientos para modificar el stock
+                </p>
+              </div>
+            ) : (
+              <Field label="Stock inicial" error={errors.stock}>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.stock}
+                  onChange={(e) => set('stock', e.target.value)}
+                  className={input(!!errors.stock)}
+                />
+              </Field>
+            )}
             <Field label="Stock mínimo" error={errors.minStock}>
               <input
                 type="number"
@@ -316,6 +329,11 @@ export default function ProductFormPanel({ open, product, categories, onClose, o
                 onChange={(e) => set('minStock', e.target.value)}
                 className={input(!!errors.minStock)}
               />
+              {!product && recommendedMinStock > 0 && (
+                <p className="text-[11px] text-muted leading-tight">
+                  Recomendado por el admin: {recommendedMinStock}
+                </p>
+              )}
             </Field>
           </div>
         </form>

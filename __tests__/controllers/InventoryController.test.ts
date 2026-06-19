@@ -57,7 +57,7 @@ describe('InventoryController', () => {
       expect(data.error).toBe('Ya existe un producto con ese código');
     });
 
-    it('líneas 21-22: retorna 500 en error genérico inesperado', async () => {
+    it('líneas 21-22: retorna 400 en error genérico inesperado', async () => {
       const body = { code: 'PRD-ERR', name: 'Producto Error' };
       (inventoryService.createProduct as jest.Mock).mockRejectedValue(new Error('DB connection lost'));
 
@@ -65,8 +65,8 @@ describe('InventoryController', () => {
       const res = await inventoryController.createProduct(req);
       const data = await res.json();
 
-      expect(res.status).toBe(500);
-      expect(data.error).toBe('Error interno del servidor');
+      expect(res.status).toBe(400);
+      expect(data.error).toBe('DB connection lost');
     });
   });
 
@@ -83,14 +83,14 @@ describe('InventoryController', () => {
       expect(data).toHaveLength(1);
     });
 
-    it('retorna 500 si listInventory lanza error', async () => {
+    it('retorna 400 si listInventory lanza error', async () => {
       (inventoryService.listInventory as jest.Mock).mockRejectedValue(new Error('Timeout'));
 
       const req = buildRequest(null, 'GET');
       const res = await inventoryController.getInventory(req);
       const data = await res.json();
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(400);
     });
   });
 });

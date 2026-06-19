@@ -3,6 +3,7 @@ module.exports = {
     testEnvironment: 'node',
     collectCoverage: true,
     coverageDirectory: 'coverage',
+    coverageReporters: ['html', 'text', 'lcov', 'json-summary'],
     globals: {
       'ts-jest': {
         tsconfig: 'tsconfig.jest.json',

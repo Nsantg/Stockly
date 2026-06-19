@@ -20,7 +20,7 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof BusinessError) {
+  if (error instanceof Error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   console.error(error);

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { productService } from '../service/ProductService';
 import { requireSession, requireRoles, WRITE_ROLES } from '../lib/permissions';
-import { BusinessError } from '../lib/errors';
-
 function handleError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return NextResponse.json(
@@ -11,7 +9,7 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof BusinessError) {
+  if (error instanceof Error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   console.error(error);

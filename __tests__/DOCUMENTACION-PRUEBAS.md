@@ -232,6 +232,52 @@ describe('MiHandler - CP-XX', () => {
 
 ---
 
+## Informe de Defectos del Ciclo de Desarrollo
+
+Registro consolidado de todos los defectos identificados desde el inicio del proyecto hasta la entrega del 3.er corte (19 de junio de 2026). Los defectos se clasifican por severidad y prioridad según el estándar ISO/IEC 25010 aplicado al plan PT-DCP-01.
+
+### Escala de severidad y prioridad
+
+| Severidad | Definición |
+|-----------|-----------|
+| **Crítica** | El defecto impide el funcionamiento del sistema o representa un riesgo de seguridad inmediato |
+| **Alta** | El defecto afecta un flujo de negocio principal y no tiene workaround viable |
+| **Media** | Funcionalidad degradada; existe workaround temporal |
+| **Baja** | Inconsistencia menor, cosmética o en documentación técnica |
+
+| Prioridad | Definición |
+|-----------|-----------|
+| P0 | Bloqueante — debe resolverse antes de cualquier release |
+| P1 | Alta — debe resolverse en el sprint actual |
+| P2 | Media — puede resolverse en el siguiente sprint |
+| P3 | Baja — puede dejarse para backlog de mantenimiento |
+
+---
+
+### Tabla de defectos
+
+| ID | Descripción | Componente afectado | Severidad | Prioridad | CP / RF / RN | Estado | Resolución / Evidencia |
+|----|-------------|---------------------|-----------|-----------|--------------|--------|------------------------|
+| DEF-001 | Escalada de privilegios en POST /api/v1/users: cualquier cliente podía crear usuarios ADMIN sin sesión activa ni validación de rol | `UserController.createUser` | **Crítica** | P0 | CP-19, CP-20, RF-16, RNF-03 | Resuelto | Se agregó `requireRoles([UserRole.ADMIN])` en todos los métodos de `UserController`. Verificado con tres casos de integración: 401, 403 y 201. |
+| DEF-002 | Tests de autorización desactualizados tras refactor de `permissions.ts`: los tests de 401 y 403 fallaban por cambio de estructura de error | `users.integration.test.ts` | **Baja** | P2 | CP-20, RNF-03 | Resuelto | Tests actualizados para validar la nueva forma del objeto de error (`error`, `details`). Suite de integración pasa al 100%. |
+| DEF-003 | FEFO implementado en `InventoryService.getLotWithFefo()` pero no conectado a `VentaHandler`: el despacho descuenta stock global del producto sin elegir el lote correcto | `VentaHandler`, `InventoryService` | **Media** | P1 | N2026-4, RF-09 | Abierto | El test unitario de FEFO pasa. Falta integrarlo en el flujo de salida. Riesgo: se despachan unidades sin respetar fecha de vencimiento bajo carga real. |
+| DEF-004 | Inconsistencia documental: el plan PT-DCP-01 documenta el campo `isActive` en la entidad `Movement`; la entidad real usa `isAnnulled` | Entidad `Movement`, documentación | **Baja** | P3 | CP-05, CP-23, RNF-06 | Abierto | Se recomienda alinear el plan o agregar un alias en la entidad. No impacta el comportamiento en producción. |
+| DEF-005 | `inventory.integration.test.ts` usa campos que pueden no existir en el DTO real; pasa porque `ProductService` está mockeado, ocultando la discrepancia | `inventory.integration.test.ts` | **Baja** | P3 | CP-01, RF-01 | Abierto | Requiere revisar los campos del DTO contra el esquema Zod y la entidad `Product`. Bajo riesgo inmediato. |
+| DEF-006 | Sin prueba de idempotencia en doble anulación (CP-06): el segundo PATCH sobre un movimiento ya anulado no está cubierto ni en unitarias ni en integración | `MovementController.annulMovement` | **Media** | P2 | CP-06, RNF-06 | Abierto | Brecha de cobertura. Podría devolver 200 en lugar de 409 en el segundo intento. Se requiere test de integración. |
+| DEF-007 | El módulo `src/lib/realtime` tiene cobertura del 63%: los paths de reconexión y manejo de errores de Socket.IO no están cubiertos | `alertNotifier.ts`, `realtime/` | **Media** | P2 | N2026-30, RF-22 | Abierto | Las rutas críticas del notificador (broadcastSummary, notifyStockChange) están cubiertas. Las rutas de reconexión son de baja frecuencia en producción. |
+
+---
+
+### Observaciones técnicas al equipo
+
+**DEF-001 (Resuelto — Crítica):** Este defecto constituía el riesgo de seguridad más alto del ciclo. La ausencia de un guardia de autorización en el endpoint de creación de usuarios habría permitido a cualquier agente externo obtener privilegios administrativos. La solución adoptada (`requireRoles`) es coherente con el patrón de control de acceso basado en roles (RBAC) ya presente en el resto de los controladores. Se recomienda establecer una prueba de regresión permanente para cualquier endpoint que opere sobre entidades de usuario.
+
+**DEF-003 (Abierto — Media):** La implementación de FEFO es funcionalmente correcta a nivel de servicio, lo que demuestra que la lógica de negocio está bien modelada. La brecha está en el acoplamiento entre `InventoryService.getLotWithFefo()` y el flujo de ejecución de `VentaHandler`. Para el siguiente sprint se recomienda inyectar la dependencia del servicio de inventario dentro del handler o crear un paso explícito de selección de lote antes del descuento de stock (RN-06 garantiza que no haya negativo, pero FEFO garantiza que el lote correcto salga primero).
+
+**DEF-006 y DEF-007 (Abiertos — Media):** Representan brechas de calidad que no bloquean la operación del MVP pero deben cerrarse antes de la siguiente iteración productiva. Se sugiere priorizarlos en el backlog de pruebas del 4.o corte.
+
+---
+
 ## Documentos relacionados
 
 | Documento | Ubicación |

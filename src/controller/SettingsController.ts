@@ -3,8 +3,6 @@ import { ZodError } from 'zod';
 import { settingsService } from '../service/SettingsService';
 import { requireSession, requireRoles } from '../lib/permissions';
 import { UserRole } from '../entity/UserRole';
-import { BusinessError } from '../lib/errors';
-
 function handleError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return NextResponse.json(
@@ -12,7 +10,7 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof BusinessError) {
+  if (error instanceof Error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   console.error(error);

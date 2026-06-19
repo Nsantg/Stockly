@@ -142,11 +142,14 @@ describe('MovementController', () => {
     it('debe crear un movimiento de entrada y retornar 201', async () => {
       mockRequireSession.mockResolvedValue(mockSession);
       mockMovementService.createMovement.mockResolvedValue({
-        id: '1',
-        productId: 'prod-1',
-        type: MovementType.ENTRADA,
-        quantity: 10,
-        isActive: true,
+        movement: {
+          id: '1',
+          productId: 'prod-1',
+          type: MovementType.ENTRADA,
+          quantity: 10,
+          isActive: true,
+        },
+        warning: null,
       } as any);
 
       const request = new NextRequest('http://localhost/api/v1/movements', {
@@ -162,8 +165,8 @@ describe('MovementController', () => {
 
       expect(response.status).toBe(201);
       const data = await response.json();
-      expect(data.type).toBe(MovementType.ENTRADA);
-      expect(data.quantity).toBe(10);
+      expect(data.movement.type).toBe(MovementType.ENTRADA);
+      expect(data.movement.quantity).toBe(10);
     });
 
     it('debe retornar 403 si no tiene permisos según tipo de movimiento', async () => {

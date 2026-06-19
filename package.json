@@ -15,7 +15,7 @@
     "seed": "cross-env TYPEORM_CLI=true ts-node --transpile-only --project tsconfig.typeorm.json -r dotenv/config -r tsconfig-paths/register src/db/seed.ts",
     "db:reset": "cross-env TYPEORM_CLI=true ts-node --transpile-only --project tsconfig.typeorm.json -r dotenv/config -r tsconfig-paths/register src/db/reset.ts",
     "test": "jest",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "jest --coverage --coverageReporters=html --coverageReporters=text --coverageReporters=lcov --coverageReporters=json-summary",
     "test:integration": "jest --config jest.integration.config.js",
     "test:bdd": "jest --config jest.bdd.config.js"
   },

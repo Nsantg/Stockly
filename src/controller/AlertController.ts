@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { alertService } from '../service/AlertService';
 import { requireSession } from '../lib/permissions';
-import { BusinessError } from '../lib/errors';
 
 function handleError(error: unknown): NextResponse {
-  if (error instanceof BusinessError) {
+  if (error instanceof Error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   console.error(error);

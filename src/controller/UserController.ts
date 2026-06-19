@@ -3,8 +3,6 @@ import { ZodError } from 'zod';
 import { userService } from '../service/UserService';
 import { requireRoles } from '../lib/permissions';
 import { UserRole } from '../entity/UserRole';
-import { BusinessError } from '../lib/errors';
-
 const ADMIN_ONLY = [UserRole.ADMIN];
 
 function handleError(error: unknown): NextResponse {
@@ -14,7 +12,7 @@ function handleError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof BusinessError) {
+  if (error instanceof Error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   console.error(error);

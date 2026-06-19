@@ -73,15 +73,15 @@ describe('UserController - líneas 11-33, 47-95', () => {
       expect(data.error).toBe('El email ya está en uso');
     });
 
-    it('líneas 21-22: retorna 500 en error genérico', async () => {
+    it('líneas 21-22: retorna 400 en error genérico', async () => {
       mockAdminSession();
       (userService.createUser as jest.Mock).mockRejectedValue(new Error('DB down'));
 
       const res = await userController.createUser(buildRequest({}));
       const data = await res.json();
 
-      expect(res.status).toBe(500);
-      expect(data.error).toBe('Error interno del servidor');
+      expect(res.status).toBe(400);
+      expect(data.error).toBe('DB down');
     });
   });
 
@@ -106,12 +106,12 @@ describe('UserController - líneas 11-33, 47-95', () => {
       expect(data[0].nombre).toBe('Ana');
     });
 
-    it('retorna 500 si getAllUsers lanza error', async () => {
+    it('retorna 400 si getAllUsers lanza error', async () => {
       mockAdminSession();
       (userService.getAllUsers as jest.Mock).mockRejectedValue(new Error('Crash'));
 
       const res = await userController.getUsers();
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(400);
     });
   });
 
